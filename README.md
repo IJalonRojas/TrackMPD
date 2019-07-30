@@ -40,7 +40,7 @@ The TrackMPD code is licensed under GPL (GNU General Public License). In summary
 # Authors
 
 * Erick Fredj: Main developer, responsible for the TrackMPD v.2 core, and the advection and dispersion modules (erick.fredj@gmail.com).
-* Isabel Jalón-Rojas: Main developer, responsible for the TrackMPD v.1 core, and the behaviour, settling and resuspension modules (ijalonrojas@gmail.com).
+* Isabel Jalón-Rojas: Main developer, responsible for the TrackMPD v.1 core, and the behaviour, settling and washing-off modules (ijalonrojas@gmail.com).
 * Xiao-Hua Wang: Contributor. 
 
 
