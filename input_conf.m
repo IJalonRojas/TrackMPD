@@ -56,7 +56,7 @@ conf.Traj.Mode='3D'; %'2D' or '3D' tracking
 % Time parameters
 conf.Traj.ReleaseTime=datenum(1998,6,26,0,0,0); %datenum(y,m,d,H,M,S)
 conf.Traj.TrajectoryDuration = 1; % in days
-conf.Traj.TimeStep=60/24/60; % in days
+conf.Traj.TimeStep=30/24/60; % in days
 conf.Traj.Direction = 'forward'; %forward or backward
 
 % Output
