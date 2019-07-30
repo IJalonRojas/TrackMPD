@@ -1,4 +1,4 @@
-# TrackMPD
+﻿# TrackMPD
 
 TrackMPD is a three-dimensional particle-tracking model for the transport of marine plastic debris in oceans and coastal systems. The power of TrackMPD lies in: (1) its compatibility with diverse formats of current-velocity inputs; and (2) its ability to extend the Lagrangian modelling of advection-diffusion by adding more-complex and realistic particle behaviours and physical processes, which can either be included or excluded depending on the application. At present, TrackMPD can include beaching, washing-off, degradation, biofouling, sinking, and deposition. In particular, sinking and deposition depend on particle behaviour, which relies on the particle density, size, shape, fouling state, and degradation state. The model can incorporate new processes and behaviours, and change the implementation of already existing ones, with new experimental findings or particular applications.
 
@@ -41,6 +41,7 @@ The TrackMPD code is licensed under GPL (GNU General Public License). In summary
 
 * Erick Fredj: Main developer, responsible for the TrackMPD v.2 core, and the advection and dispersion modules (erick.fredj@gmail.com).
 * Isabel Jalón-Rojas: Main developer, responsible for the TrackMPD v.1 core, and the behaviour, settling and resuspension modules (ijalonrojas@gmail.com).
+* Xiao-Hua Wang: Contributor. 
 
 
 # Contributing
