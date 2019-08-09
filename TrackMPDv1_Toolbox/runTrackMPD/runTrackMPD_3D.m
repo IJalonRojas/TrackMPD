@@ -305,6 +305,7 @@ for k=1:numpartition % EXTERNAL LOOP
         ln_TOT(1,:)=par(:,1);
         lt_TOT(1,:)=par(:,2);
         h_TOT(1,:)=par(:,3);
+        DepthBottomTraj(:,1)=griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),LL(:,1),LL(:,2),'nearest'); %Bottom Depth at the release point
         IniLoop=2;
     else
         IniLoop=1;
