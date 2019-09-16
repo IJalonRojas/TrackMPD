@@ -43,7 +43,7 @@ classdef behaviour6
         CreationInfo = 'UNSW'
         CreateTimeStamp = now
         CreateTimeZone = 'GMT'
-        BehaviourType = 3
+        BehaviourType = 6
         
         % Water properties
         WaterDensity
@@ -151,7 +151,7 @@ classdef behaviour6
             if newWs>=0
                 P.Ws = newWs;
             else
-              error('Invalid Ws for Behaviour 4');
+              error('Invalid Ws for Behaviour 6');
             end
         end
         
