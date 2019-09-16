@@ -41,7 +41,7 @@ classdef behaviour5
         CreationInfo = 'UNSW'
         CreateTimeStamp = now
         CreateTimeZone = 'GMT'
-        BehaviourType = 4
+        BehaviourType = 5
         
         % Water properties
         WaterDensity
@@ -131,10 +131,10 @@ classdef behaviour5
         end
         
         function P = set.Ws(P, newWs)
-            if newWs>0
+            if newWs>=0
                 P.Ws = newWs;
             else
-              error('Invalid Ws for Behaviour 4');
+              error('Invalid Ws for Behaviour 5');
             end
         end
         
