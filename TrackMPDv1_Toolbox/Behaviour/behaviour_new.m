@@ -76,13 +76,23 @@ elseif beh.BehaviourType==5
         beh.ParticleDensity = beh.PolymerDensity*(beh.Shape.radius^2./(beh.Shape.radius+beh.BiofoulingThickness).^2)+beh.FilmDensity*(1-(beh.Shape.radius^2./(beh.Shape.radius+beh.BiofoulingThickness).^2));
     end
          
-    beh.RelativeDensity=(beh.ParticleDensity-beh.WaterDensity)/beh.WaterDensity;
+    for ii=1:length(beh.ParticleDensity)
+    
+        if beh.ParticleDensity(ii)<=beh.WaterDensity
+        
+            beh.Ws(ii)=0; %(m/s)     
+        else
+    
+            beh.RelativeDensity(ii)=(beh.ParticleDensity(ii)-beh.WaterDensity)/beh.WaterDensity;
 
-    if strcmpi(beh.Category,'sphere') || strcmpi(beh.Category,'shortcylinder')
-        beh.Ws = mp_zhiyao2008(beh.RelativeDensity,beh.WaterViscosity,beh.Shape,beh.BiofoulingThickness); 
-    elseif strcmpi(beh.Category,'longcylinder')
-        beh.Ws = mp_khatmullina2017(beh.RelativeDensity,beh.WaterViscosity,beh.Shape,beh.BiofoulingThickness);
+             if strcmpi(beh.Category,'sphere') || strcmpi(beh.Category,'shortcylinder')
+                beh.Ws(ii) = mp_zhiyao2008(beh.RelativeDensity(ii),beh.WaterViscosity,beh.Shape,beh.BiofoulingThickness(ii)); 
+             elseif strcmpi(beh.Category,'longcylinder')
+                beh.Ws(ii) = mp_khatmullina2017(beh.RelativeDensity(ii),beh.WaterViscosity,beh.Shape,beh.BiofoulingThickness(ii));
+             end
+        end
     end
+  
     
 elseif beh.BehaviourType==6
      
