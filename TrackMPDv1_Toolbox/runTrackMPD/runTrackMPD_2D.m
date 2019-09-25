@@ -340,7 +340,7 @@ for k=1:numpartition % EXTERNAL LOOP
 %         end
 %         
         % Turbulence
-        [TurbHx, TurbHy] = HTurb20(numpar,TimeStepOut*24*60*60,'Kh');
+        [TurbHx, TurbHy] = HTurb20(numpar,TimeStepOut*24*60*60,'Kh',conf.Traj.Kh);
                 
         dlnTur=km2deg(TurbHx/1000);
         dltTur=km2deg(TurbHy/1000);
