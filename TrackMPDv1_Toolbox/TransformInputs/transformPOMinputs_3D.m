@@ -86,6 +86,9 @@ numlvl = length(lvl);
 
 zeros_matrix=zeros(numlon,numlat,1);
 
+   ZZ=[0;ZZ]; %Add a layer for surface z=0 (depth(:,:,1)==E) to avoid 
+   %problem when interpolating velocities near the surface
+
 for n=1:nTimeStamps
     
     ncfile = fnames{TimeStamps(n)};
@@ -122,21 +125,24 @@ for n=1:nTimeStamps
     
 % Depth at each grid point 
 
-    depth=nan(numlon,numlat,numlvl);
+
+    depth=nan(numlon,numlat,numlvl+1);
     for i=1:length(ZZ)
         depth(:,:,i)=ZZ(i)*(BottomDepth+E)+E;
     end
     
+    depth=depth-depth(:,:,1); % We change the reference system:
+                              %Surface: depth=0, bottom changing with tide
     
-    % Add a layer for surface to avoid problems when interpolate
-    % velocities near the boundaries (for POM-SARCCM it's not necessary to 
-    % include a bottom layer with vel=0, but in other models it may be needed)
-    
-    depth=cat(3,zeros_matrix,depth); 
+    % The velocity at the new first layer depth=0 equal to the veloctitie at
+    % the old first sigma layer
+       
     u=cat(3,u(:,:,1),u);
     v=cat(3,v(:,:,1),v);
     w=cat(3,w(:,:,1),w);
-    
+
+    %(for POM-SARCCM it's not necessary to include a bottom layer 
+    %with vel=0, but in other models it may be needed)
 %     depth=cat(3,zeros_matrix,depth,BottomDepth); 
 %     u=cat(3,u(:,:,1),u,zeros_matrix);
 %     v=cat(3,v(:,:,1),v,zeros_matrix);

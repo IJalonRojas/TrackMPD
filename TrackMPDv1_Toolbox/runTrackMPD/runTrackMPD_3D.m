@@ -391,8 +391,15 @@ for k=1:numpartition % EXTERNAL LOOP
             
             % Depth at particle position (to check deposition)
             %Depth_partLonLat=interp2(Lon,Lat,Depth,ln_TOT(i,part),lt_TOT(i,part)); %That's good to simulate beaches slope
+            
+            if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') %Bottom varies with tide/time
+            
+            Depth_partLonLat=-interp3(longitude,latitude,TT,squeeze(Depth(:,:,end,:)),ln_TOT(i,part),lt_TOT(i,part),ts_TOT(i));
+                
+            else
             Depth_partLonLat=griddata( Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),ln_TOT(i,part),lt_TOT(i,part),'nearest'); %#ok<GRIDD> %For the idealized bay
-        
+            end
+            
             % If there is beaching and refloating: check beaching and save
             % refloating conditions
             if inLand==1 && refloat(part,i)==0 && strcmpi(conf.Traj.Beaching,'yes')
