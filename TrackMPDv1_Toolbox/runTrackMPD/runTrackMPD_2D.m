@@ -377,9 +377,9 @@ for k=1:numpartition % EXTERNAL LOOP
                 FateType(part)=1;
                 TimeLand(part)=ts_TOT(i);
                 if chunk~=1 && cont_timechunk==1 %the last postion of the first time step of a chunk is equal to LL (IJR 26/06/2019)
-                    PosWater(part,1)=LL(1,part); %Save the last postion of particles in the water, for refloating
-                    PosWater(part,2)=LL(2,part); %Save the last postion of particles in the water, for refloating
-                    PosWater(part,3)=LL(3,part); %Save the last postion of particles in the water, for refloating
+                    PosWater(part,1)=LL(part,1); %Save the last postion of particles in the water, for refloating
+                    PosWater(part,2)=LL(part,2); %Save the last postion of particles in the water, for refloating
+                    PosWater(part,3)=LL(part,3); %Save the last postion of particles in the water, for refloating
                 else
                     PosWater(part,1)=ln_TOT(i-1,part); %Save the last postion of particles in the water, for refloating
                     PosWater(part,2)=lt_TOT(i-1,part); %Save the last postion of particles in the water, for refloating
