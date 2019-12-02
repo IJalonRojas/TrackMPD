@@ -94,7 +94,7 @@ tspanTOT=t0:direction*TimeStepOut:tend;
 
 if direction==1 %forward
    
-    if t0<TimeStepOut(1) || tend+TimeStepOut>tspanhydro(end) %(***) 1 more time steps
+    if t0<tspanhydro(1) || tend+TimeStepOut>tspanhydro(end) %(***) 1 more time steps
         error ('the hydrodynamic simulation does not cover the particles trajectory')
 %     else
 %         %create a variable with the name of inputs files
