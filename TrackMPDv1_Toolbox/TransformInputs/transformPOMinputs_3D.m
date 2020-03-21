@@ -129,10 +129,10 @@ for n=1:nTimeStamps
     depth=nan(numlon,numlat,numlvl+1);
     for i=1:length(ZZ)
         depth(:,:,i)=ZZ(i)*(BottomDepth+E)+E;
+        depth(:,:,i)=depth(:,:,i)-depth(:,:,1); % We change the reference system:
+                              %Surface: depth=0, bottom changing with tide
     end
     
-    depth=depth-depth(:,:,1); % We change the reference system:
-                              %Surface: depth=0, bottom changing with tide
     
     % The velocity at the new first layer depth=0 equal to the veloctitie at
     % the old first sigma layer
