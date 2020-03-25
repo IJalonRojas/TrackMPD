@@ -123,15 +123,19 @@ for n=1:nTimeStamps
     
     fprintf('changing format for time %s\n',time_str);
     
-% Depth at each grid point 
+% Depth at each grid point    
 
-
+    BottomDepth(BottomDepth==1)=NaN;
+    E(E==0)=NaN;
+    
     depth=nan(numlon,numlat,numlvl+1);
     for i=1:length(ZZ)
         depth(:,:,i)=ZZ(i)*(BottomDepth+E)+E;
-        depth(:,:,i)=depth(:,:,i)-depth(:,:,1); % We change the reference system:
+        depth(:,:,i)=depth(:,:,i)-E; % We change the reference system:
                               %Surface: depth=0, bottom changing with tide
     end
+    
+    depth(isnan(depth))=1;
     
     
     % The velocity at the new first layer depth=0 equal to the veloctitie at
