@@ -89,8 +89,8 @@ function [ ln, lt, h, ts ] = particle_track_ode_grid_LonLat(Lon, Lat, ZZ, ux, uy
 % Convert values in ux and uy to dLon/dDay and dLat/dDay,
 % respectively.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-ux = ux .* 60 .* 60 .* 24 .* repmat(LonPerCM,[1,1,size(ux,3)]);
-uy = uy .* 60 .* 60 .* 24 .* repmat(LatPerCM,[1,1,size(ux,3)]);
+ux = ux .* 60 .* 60 .* 24 .* repmat(LonPerCM,[1,1,size(ux,3),size(ux,4)]);
+uy = uy .* 60 .* 60 .* 24 .* repmat(LatPerCM,[1,1,size(uy,3),size(ux,4)]);
 uz = uz ./100 .* 60 .* 60 .* 24; %to dM/dDay
 
 clear LonPerCM LatPerCM

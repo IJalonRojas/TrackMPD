@@ -144,16 +144,16 @@ for itraj = 1:np
     uyi(isnan(uyi))=0;
     uzi(isnan(uzi))=0;
     
-%     if isnan(sum(hi))
-%         
-%         UX(k)=0;
-%         UY(k)=0;
-%         UZ(k)=0;
-%     else    
+    if isnan(sum(hi))|| hi(end)>zcoord(itraj) %out of domain or sinking
+        
+        UX(k)=0;
+        UY(k)=0;
+        UZ(k)=0;
+    else    
         UX(k)=interp1(hi,uxi,zcoord(itraj));
         UY(k)=interp1(hi,uyi,zcoord(itraj));
         UZ(k)=interp1(hi,uzi,zcoord(itraj));
-%    end
+   end
     
 %  
     
