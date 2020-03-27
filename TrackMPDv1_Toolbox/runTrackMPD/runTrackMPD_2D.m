@@ -248,8 +248,8 @@ for k=1:numpartition % EXTERNAL LOOP
         
         dataOGCM_aux=load(OGCMFileNames{i});
         TT=cat(1,TT,dataOGCM_aux.time);
-        U=cat(4,U,dataOGCM_aux.u);
-        V=cat(4,V,dataOGCM_aux.v);
+        U=cat(3,U,dataOGCM_aux.u);
+        V=cat(3,V,dataOGCM_aux.v);
                 
         if strcmpi(conf.Traj.Refloating,'yes')
             E=cat(3,E,dataOGCM_aux.E);
