@@ -204,9 +204,11 @@ for i=1:NTimeStamps
     
     
     % Add a layer for surface and for bottom (for interpolation purpose near the boundaries)
+    Bdep=-BottomDepth;
+    Bdep(mask_water==0)=0;
     
     if i==1
-    depth=cat(3,zeros_matrix,depth,-BottomDepth);
+    depth=cat(3,zeros_matrix,depth,Bdep);
     end
     
     u=cat(3,u(:,:,1),u,zeros_matrix);
