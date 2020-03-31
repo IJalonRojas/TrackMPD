@@ -209,8 +209,6 @@ for i=1:NTimeStamps
     depth=cat(3,zeros_matrix,depth,-BottomDepth);
     end
     
-    depth=depth-depth(:,:,1); %Change in the reference system (surface constant, varying bottom)
-    
     u=cat(3,u(:,:,1),u,zeros_matrix);
     v=cat(3,v(:,:,1),v,zeros_matrix);
     w=cat(3,w(:,:,1),w,zeros_matrix);
