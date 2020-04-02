@@ -282,7 +282,7 @@ for k=1:numpartition % EXTERNAL LOOP
     elseif strcmpi(conf.Traj.Refloating,'yes') && strcmpi(conf.Traj.Beaching,'yes')
             Elevation_ts=squeeze(E(conf.Traj.xcoord_elev,conf.Traj.ycoord_elev,:)); % Time series of elevation
             Elevation_TRAJ=interp1(TT,Elevation_ts,tspan_chunk); %Interpolate the elevation time series at external time
-            peak_pos=findpeaks(Elevation_TRAJ); %Identify high tide
+           [pks,peak_pos]=findpeaks(Elevation_TRAJ); %Identify high tide
     end
     refloat=zeros(numpar,length(tspan_chunk)); %refloat matrix [particles, time] equal to 1 when a particles is refloated at a given time
 
