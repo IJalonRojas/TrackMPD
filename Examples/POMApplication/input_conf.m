@@ -20,7 +20,6 @@ conf.OGCM.BaseDir = [pwd '\InputDataPOM']; %Folder containing OGCM inputs
 conf.OGCM.TimeStep = 1/24; %in days
 conf.OGCM.VerticalLayer = 'sigma2depthVar'; % Only for 3D mode
                                           % Options: 'Rectangular'
-                                          %          'Sigma2depthCte': cte over time, independient of Elevation
                                           %          'Sigma2depthVar': variable over time,dependient of Elevation
 
 if strcmpi(conf.OGCM.Model_name,'POM') % When using POM outputs

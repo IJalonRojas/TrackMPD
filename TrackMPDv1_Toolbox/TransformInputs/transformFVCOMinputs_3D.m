@@ -84,7 +84,7 @@ Lon=linspace(min(lon_v),max(lon_v),numlon);
 for i=1:numlat
     for j=1:numlon
 
-        ti(i,j) = pointLocation(TR,[Lon_matrix(i,j),Lat_matrix(i,j)]); %ti=Nan-->Land point
+        ti(i,j) = pointLocationQuadTree(TR,[Lon_matrix(i,j),Lat_matrix(i,j)]); %ti=Nan-->Land point
 
     end
 end
@@ -119,8 +119,9 @@ fprintf('saving grid\n');
 %% Read and save Time information    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 TT=double(ncread(file,time_name)); %modified julian date
-TT=datetime(TT(:),'convertfrom','modifiedjuliandate');
-timestamps=datenum(TT);
+timestamps=TT+678942; %all matlab versions
+%TT=datetime(TT(:),'convertfrom','modifiedjuliandate'); % recent matlab version
+%timestamps=datenum(TT); % recent matlab version
 save([conf.Data.BaseDir '\timestamps.mat'],'timestamps');
 fprintf('saving timestamps\n');
 
@@ -139,10 +140,6 @@ ele=double(ncread(file,'zeta')); %elevation (m)
 siglay=double(ncread(file,'siglay')); 
 h_con=double(griddata(x,y,h,Lon_matrix,Lat_matrix,'nearest')); %
 
-for i=1:length(siglay(1,:))
-   siglayzc(:,:,i)=h_con.*siglay(1,i);
-end
-% siglayzc=double(ncread(file,'siglayzc')); %can be read from output ZC
 
 % Loop for each time step
 
@@ -173,11 +170,11 @@ for i=1:NTimeStamps
         Waux(isnan(Waux))=0; 
         w(:,:,j)=Waux;
         
-        if i==1 %depth does not change with time in FVCOM (independent of elevation)
-        Depth_aux=siglayzc(:,:,j);
-        Depth_aux(mask_water==0)=0; 
-        depth(:,:,j)=Depth_aux;
-        end
+        %if i==1 %depth does not change with time in FVCOM (independent of elevation)
+%         Depth_aux=siglayzc(:,:,j);
+%         Depth_aux(mask_water==0)=0; 
+%         depth(:,:,j)=Depth_aux;
+%         end
         
         clear Uaux Vaux Waux
     end
@@ -188,8 +185,9 @@ for i=1:NTimeStamps
     ELEaux(isnan(ELEaux))=0; 
     E(:,:)=ELEaux;
    
-    clear ELEaux
     
+    clear ELEaux
+      
     %1D variables: time
     time=timestamps(i);
     time_str = datestr(time,'dd-mmm-yyyy HH:MM:SS');
@@ -203,13 +201,15 @@ for i=1:NTimeStamps
     w=w*100;
     
     
-    % Add a layer for surface and for bottom (for interpolation purpose near the boundaries)
-    Bdep=-BottomDepth;
-    Bdep(mask_water==0)=0;
+    % Depth calculation
+    sigma=[0 siglay(1,:) -1];
+    BottomDepth(BottomDepth==0)=NaN;
+      for sig=1:numlvl+2
+        depth(:,:,sig)=(BottomDepth+E).*sigma(1,sig); %+ele-ele (-ele to make depth=0 at surface waters)
+      end
+      
+      depth(isnan(depth))=1;
     
-    if i==1
-    depth=cat(3,zeros_matrix,depth,Bdep);
-    end
     
     u=cat(3,u(:,:,1),u,zeros_matrix);
     v=cat(3,v(:,:,1),v,zeros_matrix);

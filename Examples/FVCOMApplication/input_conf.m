@@ -18,9 +18,8 @@ conf.OGCM.Model_name = 'FVCOM'; %Select POM or FVCOM
 conf.OGCM.DomainName = 'YRE';
 conf.OGCM.BaseDir = [pwd '\InputDataFVCOM'];
 conf.OGCM.TimeStep = 1/24; %in days
-conf.OGCM.VerticalLayer = 'sigma2depthCte'; % Only for 3D mode
+conf.OGCM.VerticalLayer = 'sigma2depthVar'; % Only for 3D mode
                                           % Options: 'Rectangular'
-                                          %          'Sigma2depthCte': cte over time, independient of Elevation
                                           %          'Sigma2depthVar': variable over time,dependient of Elevation
 
 if strcmpi(conf.OGCM.Model_name,'POM') % When using transformPOMoutputs function
