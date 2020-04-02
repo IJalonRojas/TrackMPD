@@ -1,4 +1,4 @@
-function transformFVCOMoutputs_3D(conf_name)
+function transformFVCOMinputs_3D(conf_name)
 % TRANSFORM OGCM outputs (SARCCM FVCOM version) to TrackMPD format
 % I.Jalon-Rojas  8 July 2019; based on LoadFVCOMFiles_3D
 
