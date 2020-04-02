@@ -102,7 +102,7 @@ end
 %Bottom Depth
 h=double(ncread(file,'h'));
 BottomDepth=double(griddata(x,y,h,Lon_matrix,Lat_matrix,'nearest')); % Interpolation of U in the new grid
-BottomDepth(mask_water==0)=1; %Land=1
+BottomDepth(mask_water==0)=NaN; %Land=NaN
 
 % Verification plot
 figure;

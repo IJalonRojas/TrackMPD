@@ -280,7 +280,7 @@ for k=1:numpartition % EXTERNAL LOOP
         error('refloating cannot occurr withouth beaching')
    
     elseif strcmpi(conf.Traj.Refloating,'yes') && strcmpi(conf.Traj.Beaching,'yes')
-            Elevation_ts=squeeze(E(conf.Traj.xcoord_elev,conf.Traj.xcoord_elev,:)); % Time series of elevation
+            Elevation_ts=squeeze(E(conf.Traj.xcoord_elev,conf.Traj.ycoord_elev,:)); % Time series of elevation
             Elevation_TRAJ=interp1(TT,Elevation_ts,tspan_chunk); %Interpolate the elevation time series at external time
             peak_pos=findpeaks(Elevation_TRAJ); %Identify high tide
     end
