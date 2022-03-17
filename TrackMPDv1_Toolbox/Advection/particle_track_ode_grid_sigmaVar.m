@@ -144,7 +144,7 @@ for itraj = 1:np
     uyi(isnan(uyi))=0;
     uzi(isnan(uzi))=0;
     
-    if isnan(sum(hi))|| hi(end)>zcoord(itraj) %out of domain or sinking
+    if isnan(sum(hi))|| hi(end)>zcoord(itraj) || zcoord(itraj)>0 %out of domain or sinking
         
         UX(k)=0;
         UY(k)=0;
