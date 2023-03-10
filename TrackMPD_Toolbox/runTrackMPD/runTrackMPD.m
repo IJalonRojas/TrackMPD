@@ -6,7 +6,7 @@ function runTrackMPD(conf_name,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % 	$Id: runTrackMPD_3D.m 001 2018-02-12 10:55:10Z ef $
-%        Last version: 2022-03-10 vmarieu
+%        Last version: 2023-03-10 vmarieu
 %
 % Copyright (C) 2017-2019 Isabel Jalon-Rojas & Vincent Marieu 
 % Licence: GPL (Gnu Public License)
@@ -489,7 +489,6 @@ for k=1:numpartition % EXTERNAL LOOP
     LL2 = lt_Tot_Input(part);
     LL3 = h_Tot_Input(part);
     if IniLoop == 2
-      ts_Tot_Part(1) = ReleaseTime;
       ln_Tot_Part(1) = LL1;
       lt_Tot_Part(1) = LL2;
       h_Tot_Part(1) = LL3;
@@ -655,8 +654,13 @@ for k=1:numpartition % EXTERNAL LOOP
         for jj=2:length(tspan)
           
           % Advection
-          [ln_ADV,lt_ADV,h_ADV] = AdvectionSchemes(conf.Traj.Scheme,longitude,latitude,Depths,TTs,Us,Vs,Ws,LL1,LL2,LL3,tspan(jj-1),TimeStepCalc);
-          
+          if strcmpi(conf.Traj.Mode,'2D')
+            [ln_ADV,lt_ADV] = AdvectionSchemes2D(conf.Traj.Scheme,longitude,latitude,TTs,Us,Vs,LL1,LL2,tspan(jj-1),TimeStepCalc);
+            h_ADV = 0.0;
+          else
+            [ln_ADV,lt_ADV,h_ADV] = AdvectionSchemes(conf.Traj.Scheme,longitude,latitude,Depths,TTs,Us,Vs,Ws,LL1,LL2,LL3,tspan(jj-1),TimeStepCalc);
+          end
+
           % CFL Check for advection, movement must be less than one grid cell
           CFLX = abs(ln_ADV-LL1)/DLon;
           CFLY = abs(lt_ADV-LL2)/DLat;
@@ -667,46 +671,43 @@ for k=1:numpartition % EXTERNAL LOOP
       %    end
           
           % Turbulence
-          %if strcmpi(conf.Traj.Dispersion,'yes')==1 %IJR: 01/09/22
-              
-              if strcmpi(conf.Traj.KhOption,'fromOGCM')
-                kh=interpDispersion(longitude,latitude,Depths,TTs,KHs,[LL1 LL2 LL2],tspan(jj)); %IJR April 2020
-                % IJR22: To be checked!!!
-              else
-                kh=conf.Traj.Kh;
-              end
+          if strcmpi(conf.Traj.KhOption,'fromOGCM')
+            kh=interpDispersion(longitude,latitude,Depths,TTs,KHs,[LL1 LL2 LL3],tspan(jj)); %IJR April 2020
+            % IJR22: To be checked!!!
+          else
+            kh=conf.Traj.Kh;
+          end
+          if strcmpi(conf.Traj.KvOption,'fromOGCM')
+            kv=interpDispersion(longitude,latitude,Depths,TTs,KVs,[LL1 LL2 LL3],tspan(jj)); %IJR April 2020
+          else
+            kv=conf.Traj.Kv;
+          end
 
-              if strcmpi(conf.Traj.KvOption,'fromOGCM')
-                kv=interpDispersion(longitude,latitude,Depths,TTs,KVs,[LL1 LL2 LL2],tspan(jj)); %IJR April 2020
-              else
-                kv=conf.Traj.Kv;
-              end
+          [TurbHx, TurbHy, TurbV] = HTurb30(1,TimeStepCalc*24*60*60,'Kh',kh,'Kv',kv);
 
-              [TurbHx, TurbHy, TurbV] = HTurb30(1,TimeStepCalc*24*60*60,'Kh',kh,'Kv',kv);
+          if ~strcmpi(conf.OGCM.Coordinates,'cartesian')
+            dlnTur=km2deg(TurbHx/1000);
+            dltTur=km2deg(TurbHy/1000);
+          else
+            dlnTur=TurbHx;
+            dltTur=TurbHy;
+          end
 
-              if ~strcmpi(conf.OGCM.Coordinates,'cartesian')
-                dlnTur=km2deg(TurbHx/1000);
-                dltTur=km2deg(TurbHy/1000);
-              else
-                dlnTur=TurbHx;
-                dltTur=TurbHy;
-              end
-          
-          %else
-      %       dlnTur=0;
-      %       dltTur=0;
-      %       TurbV = 0;
-          %end
-          
           % Behaviour/Sinking
           % Settling velocity at each time stamp
-          Behaviour = behaviour(conf.Beh,tspan);
-          h_BEH=Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
-          
+          if strcmpi(conf.Traj.Mode,'2D')
+            TurbV = 0.0
+            h_BEH = 0.0
+          else
+            Behaviour = behaviour(conf.Beh,tspan);
+            h_BEH = Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
+          end  
+
           % New particule position
           LL1 = ln_ADV+dlnTur;     % Advection + Turbulence
           LL2 = lt_ADV+dltTur;     % Advection + Turbulence
           LL3 = h_ADV+TurbV-h_BEH; % Advection + Turbulence + Behaviour 
+          
         end            
       end
       
@@ -738,6 +739,14 @@ for k=1:numpartition % EXTERNAL LOOP
           end
           TimeLandPart=tspan_chunk(i);
           
+          % Avoid particles higher than water surface (even if in land)
+          if LL3>0.0 % 0, 0.1 flotteurs
+            LL3=0.0;
+            if conf.Traj.Verbose >= 2
+               disp(['Out of water, particle: ' num2str(part) ', i:' num2str(i)])
+            end
+          end
+
           % Save the last position of particles in the water (for refloating)
           if strcmpi(conf.Traj.Beaching,'yes')==1            
             FateTypePart = 1;
@@ -765,7 +774,7 @@ for k=1:numpartition % EXTERNAL LOOP
         if FateTypePart==0
           
           % Avoid particles higher than water surface
-          if LL3>=0.0 % 0, 0.1 flotteurs
+          if LL3>0.0 % 0, 0.1 flotteurs
             LL3=0.0;
             if conf.Traj.Verbose >= 2
                 disp(['Out of water, particle: ' num2str(part) ', i:' num2str(i)])
@@ -773,7 +782,7 @@ for k=1:numpartition % EXTERNAL LOOP
           end
           
           % Deposition check
-          if abs(LL3)>=Depth_partLonLat
+          if abs(LL3)>=Depth_partLonLat && strcmpi(conf.Traj.Mode,'3D')==1 % IJR 2D
             if conf.Traj.Verbose >= 2
               disp(['Reaching the bed, particle: ' num2str(part) ', i:' num2str(i) ', at depth:' num2str(Depth_partLonLat,'%.2f') ', LL3: ' num2str(LL3,'%.2f')])
             end

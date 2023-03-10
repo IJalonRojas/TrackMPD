@@ -1,5 +1,4 @@
 function K=interpTrackMPD(X,Y,ZZ,TT,k,posPart,time)
-n=size(posPart,1);
 
 for i=1:size(k,3)
   ki(i) = interp3( X, Y, TT, squeeze(k(:,:,i,:)), posPart(1,1), posPart(1,2),time, 'linear' );

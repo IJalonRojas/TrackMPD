@@ -13,7 +13,7 @@ function transformTELEMACinputs_2D(conf_name,confOGCM_name)
 %%%% OUTPUTS
 % grid.mat
 % timestamps.mat
-% One file for each time step containing u,v,E,time,time_str
+% One file for each time step containing u,v,w,E,depth,time,time_str
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Call the model configuration and inputs files
@@ -41,7 +41,7 @@ numlat=conf.OGCM.NumLatGrid;
 data = telheadr(file); %le o resultado do telemac
 
 NumGridPts = data.NPOIN/data.NPLAN; 
-numlvl = data.NPLAN;
+numlvl = 1; %data.NPLAN; %2D IJR 300123
 NTimeStamps = data.NSTEPS;
  
 
@@ -105,7 +105,7 @@ end
 
 TT = 0:data.DT:data.NSTEPS*data.DT; %dt is in seconds
 timestamps=t0+TT/60/60/24; %transform to days
-save([conf.Data.BaseDir '\timestamps.mat'],'timestamps');
+save([conf.Data.BaseDir '/timestamps.mat'],'timestamps');
 fprintf('saving timestamps\n');
 
 
@@ -121,28 +121,29 @@ for t = 1:NTimeStamps %carrega p/cada timestep
     % Open data for each time step
     data_t = telstepr(data_t,t); %carrega p/cada timestep   
     
-    
-    lv=1;
-        UU(:,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),2);
-        VV(:,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),3);
+    %depth unit: m
+    %for lv=1:numlvl %2D IJR 300123
+    lv=1; %2D IJR 300123
+        %DEPTH(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),1); %2D IJR 300123
+        UU(:,lv,t) = data_t.RESULT(NumGridPts*(data.NPLAN-lv)+1:NumGridPts*(data.NPLAN+1-lv),2);
+        VV(:,lv,t) = data_t.RESULT(NumGridPts*(data.NPLAN-lv)+1:NumGridPts*(data.NPLAN+1-lv),3);
         %velocities units = 'm/s'
-    % To calculate Bottom Depth and elevation
-    for lv=1:numlvl
-        DEPTH(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),1);
-    end
-
+        
+    %end %2D IJR 300123
     
 end
 
 % Calculate Bottom Depth from Depth (last layer, first time step)
 
-BottomDepth=griddata(x,y,DEPTH(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of Depth in the new grid
-BottomDepth(mask_water==0)=1; %Land point=0
-BottomDepth(isnan(BottomDepth))=1; 
-BottomDepth=permute(BottomDepth,[2,1]); %lat lon
+DEPTH_END = data_t.RESULT(NumGridPts*(data.NPLAN-data.NPLAN)+1:NumGridPts*(data.NPLAN+1-data.NPLAN),1); %2D IJR 300123
+%BottomDepth=griddata(x,y,DEPTH(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of Depth in the new grid
+BottomDepth=griddata(x,y,DEPTH_END(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest');  %2D IJR 300123
+BottomDepth(mask_water==0)=NaN; %Land point=0
+%BottomDepth(isnan(BottomDepth))=1; 
+%BottomDepth=permute(BottomDepth,[2,1]); %lat lon
 
 % save grid
-save([conf.Data.BaseDir '\grid.mat'],'Lat','Lon','mask_water','BottomDepth');
+save([conf.Data.BaseDir '/grid.mat'],'Lat','Lon','mask_water','BottomDepth');
 fprintf('saving grid\n');
 
 % Loop for each time step
@@ -151,39 +152,43 @@ fprintf('saving grid\n');
 
 for i=1:NTimeStamps
     
-    %depth=nan(numlat,numlon,numlvl);
+    depth=nan(numlat,numlon,numlvl);
     u=nan(numlat,numlon,numlvl);
     v=nan(numlat,numlon,numlvl);
-    %w=nan(numlat,numlon,numlvl);
+    w=nan(numlat,numlon,numlvl);
     E=nan(numlat,numlon);
     BottomDepth=nan(numlat,numlon);
     
     % 3D variables
-    %for j=1:numlvl
-        Uaux=griddata(x,y,UU(:,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
+    for j=1:numlvl
+        Uaux=griddata(x,y,UU(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
         Uaux(mask_water==0)=0; %Land point=0
         Uaux(isnan(Uaux))=0; 
-        u=Uaux;
+        u(:,:,j)=Uaux;
 
-        Vaux=griddata(x,y,VV(:,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
+        Vaux=griddata(x,y,VV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
         Vaux(mask_water==0)=0;
         Vaux(isnan(Vaux))=0; 
-        v=Vaux;
+        v(:,:,j)=Vaux;
         
-        E_aux=griddata(x,y,DEPTH(:,1,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-        E_aux(mask_water==0)=0; %Land point=0
-        E_aux(isnan(E_aux))=0; 
-        E(:,:)=E_aux;
+        %Depth_aux=griddata(x,y,DEPTH(:,j,i),Lon_matrix,Lat_matrix,'linear'); %2D IJR 300123
+        %Depth_aux(mask_water==0)=NaN; %Land point=NaN%2D IJR 300123
+        %depth(:,:,j)=Depth_aux; %2D IJR 300123
+        
+        depth(:,:,j)=-1; %2D IJR 300123
+        depth(mask_water==0)=NaN; %2D IJR 300123
         
         clear Uaux Vaux Depth_aux
-    %end
+    end
     
-    %w=zeros(size(u));
+    w=zeros(size(u));
     
     %2D variables
     
-    %E=depth(:,:,1);
-    %BottomDepth=depth(:,:,end);
+    %E=depth(:,:,1); %2D IJR 300123
+    %BottomDepth=depth(:,:,end); %2D IJR 300123
+    
+    E=data_t.RESULT(NumGridPts*(data.NPLAN-1)+1:NumGridPts*(data.NPLAN+1-1),1); %2D IJR 300123
     
     
     %1D variables: time
@@ -195,20 +200,34 @@ for i=1:NTimeStamps
     % From m/s to cm/s 
     u=u*100;
     v=v*100;
-    %w=w*100;
+    w=w*100;
     
     %Change in the reference system (surface constant, varying bottom)
-    %depth=depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the reference system (surface constant, varying bottom)
+    %depth=depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the
+    %reference system (surface constant, varying bottom) %2D IJR 300123
+    
+    % Land point ==1 for TrackMPD
+    depth(isnan(depth))=1; 
     
     % change dimensions from lon,lat,z to lat,lon,z
-    u=permute(u,[2,1,3]); %lat,lon,z
-    v=permute(v,[2,1,3]); %lat,lon,z
-    %w=permute(w,[2,1,3]); %lat,lon,z
-    %depth=permute(depth,[2,1,3]); %lat,lon
-    E=permute(E,[2,1]);
+%     u=permute(u,[2,1,3]); %lat,lon,z
+%     v=permute(v,[2,1,3]); %lat,lon,z
+%     w=permute(w,[2,1,3]); %lat,lon,z
+%     depth=permute(depth,[2,1,3]); %lat,lon
+%     E=permute(E,[2,1]);
     
+    for ii=1:numlat
+        for jj=1:numlon
+            if sum(depth(ii,jj,:))==0
+                depth(ii,jj,:)=1;
+            end
+        end
+    end
+
+
+
     % save data for each time step 
-    save([conf.Data.BaseDir '\TrackMPDInput' num2str(i) '.mat'],'u','v','E','time','time_str');
+    save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','E','time','time_str','depth','BottomDepth');
     
 end
 

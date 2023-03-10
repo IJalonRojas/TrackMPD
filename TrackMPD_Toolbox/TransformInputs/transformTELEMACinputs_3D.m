@@ -208,6 +208,16 @@ for i=1:NTimeStamps
 %     depth=permute(depth,[2,1,3]); %lat,lon
 %     E=permute(E,[2,1]);
     
+    for ii=1:numlat
+        for jj=1:numlon
+            if sum(depth(ii,jj,:))==0
+                depth(ii,jj,:)=1;
+            end
+        end
+    end
+
+
+
     % save data for each time step 
     save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','E','time','time_str','depth','BottomDepth');
     
