@@ -152,7 +152,7 @@ tspanTOT=t0:direction*TimeStepOut:tend;
 TSRatio = ceil(TimeStepOut/TimeStepInp);
 if TSRatio > 1
   disp(['Warning: Time Step ratio = ' num2str(TSRatio) ])
-  disp('TrackMPD time step (conf.Traj.TimeStepOut) is larger than the model time step (conf.Traj.TimeStepOut) !')
+  disp('TrackMPD time step (conf.Traj.TimeStepOut) is larger than the model time step (conf.OGCM.TimeStep) !')
   disp('Consider changing to a smaller TrackMPD time step for better performances')
 end
 
