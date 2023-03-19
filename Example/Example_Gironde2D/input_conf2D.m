@@ -77,12 +77,10 @@ conf.Traj.chunklen = 0.5; % duration of partitions (in days)
 conf.Traj.KvOption='Cte'; %Options: 'Cte'=constant; 'fromOGCM'=from hydrodynamic model
 conf.Traj.KhOption='Cte'; %Options: 'Cte'=constant; 'fromOGCM'=from hydrodynamic model
 if strcmpi(conf.Traj.KhOption,'Cte');
-    conf.Traj.Kh = 0; % [m2/s]  %Kh=0 no dispersion
-%     conf.Traj.Kh = 1; % [m2/s]  %Kh=0 no dispersion
+    conf.Traj.Kh = 0.2; % [m2/s]  
 end
 if strcmpi(conf.Traj.KvOption,'Cte');
-    conf.Traj.Kv = 0; %0.00001; % [m2/s] For 3D mode
-%     conf.Traj.Kv = 0.0001; %0.00001; % [m2/s] For 3D mode
+    conf.Traj.Kv = 0.00001; % [m2/s] For 3D mode %Kv=0 no dispersion
 end
 
 % Other Transport Processes
