@@ -795,7 +795,7 @@ for k=1:numpartition % EXTERNAL LOOP
               LastVpPart = (LL2-LastLL2)/TimeStepOut;  % => 0 is another option
               [LastUpPart,LastVpPart] = transformUScalar(LL1,LL2,LastUpPart,LastVpPart,conf.OGCM.Coordinates,-1); % convert to m/s
             else
-              LL3 = -Depth_partLonLat;
+              LL3 = min([-Depth_partLonLat 0]); %min to avoid problems when interpolation near the coast
             end
           end
         end              
