@@ -626,12 +626,25 @@ for k=1:numpartition % EXTERNAL LOOP
       
       % Optimization of the interpolations by reducing the data matrices in the temporal dimension
       [~,Ind1] = min(abs(TT-tspan(1)));
-      if TT(Ind1)>tspan(1)
-        Ind1=Ind1-1;
+      disp(['Ind1 : ' num2str(Ind1)])
+      if direction > 1
+        if TT(Ind1)>tspan(1)
+          Ind1=Ind1-1;
+        end
+      else
+        if TT(Ind1)<tspan(1)
+          Ind1=Ind1-1;
+        end  
       end
       [~,Ind2] = min(abs(TT-tspan(end)));
-      if TT(Ind2)<tspan(end)
-        Ind2=Ind2+1;
+      if direction > 1
+        if TT(Ind2)<tspan(end)
+          Ind2=Ind2+1;
+        end
+      else
+        if TT(Ind2)>tspan(end)
+          Ind2=Ind2+1;
+        end  
       end
       Ind = Ind1:Ind2;
       TTs = TT(Ind1:Ind2);  
