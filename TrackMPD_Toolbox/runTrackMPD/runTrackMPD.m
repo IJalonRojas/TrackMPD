@@ -333,7 +333,7 @@ for k=1:numpartition % EXTERNAL LOOP
     
     if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.VerticalLayer,'hybrid')
       Depth=cat(4,Depth,dataOGCM_aux.depth);
-    elseif i==1 && strcmpi(conf.OGCM.VerticalLayer,'rectangular')
+    elseif strcmpi(conf.OGCM.VerticalLayer,'rectangular')
       Depth=cat(4,Depth,dataOGCM_aux.depth);
     else
       error ('Invalid type of vertical layer')
