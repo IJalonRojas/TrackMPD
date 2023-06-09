@@ -675,10 +675,10 @@ for k=1:numpartition % EXTERNAL LOOP
           
           % Advection
           if strcmpi(conf.Traj.Mode,'2D')
-            [ln_ADV,lt_ADV] = AdvectionSchemes2D(conf.Traj.Scheme,longitude,latitude,TTs,Us,Vs,LL1,LL2,tspan(jj-1),TimeStepCalc);
+            [ln_ADV,lt_ADV] = AdvectionSchemes2D(conf.Traj.Scheme,longitude,latitude,TTs,Us,Vs,LL1,LL2,tspan(jj-1),TimeStepCalc,direction);
             h_ADV = 0.0;
           else
-            [ln_ADV,lt_ADV,h_ADV] = AdvectionSchemes(conf.Traj.Scheme,longitude,latitude,Depths,TTs,Us,Vs,Ws,LL1,LL2,LL3,tspan(jj-1),TimeStepCalc);
+            [ln_ADV,lt_ADV,h_ADV] = AdvectionSchemes(conf.Traj.Scheme,longitude,latitude,Depths,TTs,Us,Vs,Ws,LL1,LL2,LL3,tspan(jj-1),TimeStepCalc,direction);
           end
 
           % CFL Check for advection, movement must be less than one grid cell
