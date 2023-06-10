@@ -492,6 +492,7 @@ for k=1:numpartition % EXTERNAL LOOP
       ln_Tot_Part(1) = LL1;
       lt_Tot_Part(1) = LL2;
       h_Tot_Part(1) = LL3;
+      ts_Tot_Part(1) = ReleaseTime;
     end
     FateTypePart = FateType(part);
     LastUpPart = LastUpInput(part);
@@ -720,8 +721,12 @@ for k=1:numpartition % EXTERNAL LOOP
             h_BEH = 0.0
           else
             Behaviour = behaviour(conf.Beh,tspan);
-            h_BEH = Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
-          end  
+            if Behaviour.Ws(jj)>0 && direction==-1
+                h_BEH = -Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
+            else
+                h_BEH = Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
+            end
+          end
 
           % New particule position
           LL1 = ln_ADV+dlnTur;     % Advection + Turbulence
