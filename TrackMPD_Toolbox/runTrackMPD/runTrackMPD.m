@@ -721,6 +721,8 @@ for k=1:numpartition % EXTERNAL LOOP
             h_BEH = 0.0
           else
             Behaviour = behaviour(conf.Beh,tspan);
+			
+			% Floating particles don't come from the bed even in backward computation
             if Behaviour.Ws(jj)>0 && direction==-1
                 h_BEH = -Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
             else
