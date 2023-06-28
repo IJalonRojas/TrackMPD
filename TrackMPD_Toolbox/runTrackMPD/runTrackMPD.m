@@ -325,10 +325,10 @@ for k=1:numpartition % EXTERNAL LOOP
     V=cat(4,V,dataOGCM_aux.v);
     W=cat(4,W,dataOGCM_aux.w);
     if strcmpi(conf.Traj.KhOption,'fromOGCM')
-      KH=cat(4,KV,dataOGCM_aux.kh); %IJR April 2020
+      KH=cat(4,KH,dataOGCM_aux.kh); %IJR April 2020
     end
     if strcmpi(conf.Traj.KvOption,'fromOGCM')
-      KV=cat(4,KH,dataOGCM_aux.kv); %IJR April 2020
+      KV=cat(4,KV,dataOGCM_aux.kv); %IJR April 2020
     end
     
     if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.VerticalLayer,'hybrid')
