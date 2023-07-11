@@ -95,14 +95,18 @@ if strcmpi(conf.Traj.Refloating,'yes')
     error('Refloating cannot occurr without beaching !')
   end
 end
-if strcmpi(conf.Traj.Resuspension,'yes') 
+if strcmpi(conf.Traj.Resuspension,'yes')
   if strcmpi(conf.Traj.Deposition,'no')
     error('Resuspension cannot occurr without deposition !')
+  elseif strcmpi(conf.Traj.ResOption,'soulsby')
+    taucr1= Soulsby_tcr1(conf.Beh.ParticleSize,conf.Beh.ParticleDensity,conf.Beh.WaterDensity); %N/m2
+    taucr2= Soulsby_tcr2(conf.Beh.ParticleSize,conf.Beh.ParticleDensity,conf.Beh.WaterDensity); %N/m2
+  elseif strcmpi(conf.Traj.ResOption,'waldschlager')
+    taucr1_= Soulsby_tcr1(conf.Beh.SediD50,2.65,conf.Beh.WaterDensity); %N/m2
+    taucr2_= Soulsby_tcr2(conf.Beh.SediD50,2.65,conf.Beh.WaterDensity); %N/m2
+    taucr1 = exp_hid(taucr1_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
+    taucr2 = exp_hid(taucr2_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
   end
-  taucr1_= Soulsby_tcr1(conf.Beh.ParticleSize,conf.Beh.ParticleDensity,conf.Beh.WaterDensity); %N/m2
-  taucr2_= Soulsby_tcr2(conf.Beh.ParticleSize,conf.Beh.ParticleDensity,conf.Beh.WaterDensity); %N/m2
-  taucr1 = exp_hid(taucr1_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
-  taucr2 = exp_hid(taucr2_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
 else
   taucr1 = 0.0; % Necessary for parallel computation even if not used
   taucr2 = 0.0;
