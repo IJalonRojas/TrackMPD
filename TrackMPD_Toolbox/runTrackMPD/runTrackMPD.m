@@ -106,6 +106,9 @@ if strcmpi(conf.Traj.Resuspension,'yes')
     taucr2_= Soulsby_tcr2(conf.Beh.SediD50,2.65,conf.Beh.WaterDensity); %N/m2
     taucr1 = exp_hid(taucr1_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
     taucr2 = exp_hid(taucr2_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
+  elseif strcmpi(conf.Traj.ResOption,'value')
+      taucr1 = conf.Traj.tau1;
+      taucr2 = conf.Traj.tau2;
   end
 else
   taucr1 = 0.0; % Necessary for parallel computation even if not used

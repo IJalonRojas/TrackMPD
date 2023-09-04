@@ -98,8 +98,12 @@ end
 conf.Traj.Deposition = 'no'; % Deposition: 'yes' or 'no'
 conf.Traj.Resuspension = 'no'; % Resuspension: 'yes' or 'no'
 if strcmpi(conf.Traj.Resuspension,'yes')
-  conf.Traj.ResOption = 'waldschlager'; % Options: soulsby, waldschlager
   conf.Traj.Sliding = 'no'; % Sliding (bedload): 'yes' or 'no'
+  conf.Traj.ResOption = 'waldschlager'; % Options: soulsby, waldschlager,value
+    if strcmpi(conf.Traj.ResOption,'value')
+        conf.Traj.tau1=NaN;
+        conf.Traj.tau2=0;
+    end
 end
 
 
