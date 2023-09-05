@@ -101,8 +101,8 @@ if strcmpi(conf.Traj.Resuspension,'yes')
   conf.Traj.Sliding = 'no'; % Sliding (bedload): 'yes' or 'no'
   conf.Traj.ResOption = 'waldschlager'; % Options: soulsby, waldschlager,value
     if strcmpi(conf.Traj.ResOption,'value')
-        conf.Traj.tau1=NaN;
-        conf.Traj.tau2=0;
+        conf.Traj.tauc1=NaN;
+        conf.Traj.tauc2=0;
     end
 end
 

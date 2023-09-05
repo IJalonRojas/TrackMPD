@@ -107,8 +107,8 @@ if strcmpi(conf.Traj.Resuspension,'yes')
     taucr1 = exp_hid(taucr1_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
     taucr2 = exp_hid(taucr2_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
   elseif strcmpi(conf.Traj.ResOption,'value')
-      taucr1 = conf.Traj.tau1;
-      taucr2 = conf.Traj.tau2;
+      taucr1 = conf.Traj.tauc1;
+      taucr2 = conf.Traj.tauc2;
   end
 else
   taucr1 = 0.0; % Necessary for parallel computation even if not used
