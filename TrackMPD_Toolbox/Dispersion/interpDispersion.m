@@ -12,7 +12,7 @@ for part=1:n
 
         ki(isnan(ki))=0;
         
-        if isnan(sum(hi)) || hi(end)>posPart(part,3) %out of domain or sinking or beaching
+        if isnan(sum(hi)) || hi(end)>posPart(part,3) || sum(hi)>0 %out of domain or sinking or beaching
             K(part)=0;
         else    
             K(part)=interp1(hi,ki,posPart(part,3));
