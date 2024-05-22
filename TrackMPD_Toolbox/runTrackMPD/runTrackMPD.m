@@ -246,6 +246,8 @@ FateType=zeros(numpar,1); %Initial region 0=water; 1=land; 2=bottom; 3=out of Do
 LastUpInput=zeros(numpar,1);
 LastVpInput=zeros(numpar,1);
 TimeLand=NaN(numpar,1);
+TimeOutDomain=NaN(numpar,1); %IJR 14/02/24
+TimeSettling=NaN(numpar,1); %IJR 14/02/24
 PosWater1=NaN(numpar,1);
 PosWater2=NaN(numpar,1);
 PosWater3=NaN(numpar,1);
@@ -505,6 +507,8 @@ for k=1:numpartition % EXTERNAL LOOP
     LastUpPart = LastUpInput(part);
     LastVpPart = LastVpInput(part);
     TimeLandPart = TimeLand(part);
+    TimeOutDomainPart = TimeOutDomain(part);
+    TimeSettlingPart = TimeSettling(part);
     PosWater1Part = PosWater1(part);
     PosWater2Part = PosWater2(part);
     PosWater3Part = PosWater3(part);
@@ -727,7 +731,7 @@ for k=1:numpartition % EXTERNAL LOOP
             TurbV = 0.0
             h_BEH = 0.0
           else
-            Behaviour = behaviour(conf.Beh,tspan);
+            Behaviour = behaviour(conf.Beh,tspan,ReleaseTime); %IJR 0424
 			
 			% Floating particles don't come from the bed even in backward computation
             if Behaviour.Ws(jj)>0 && direction==-1
@@ -761,6 +765,7 @@ for k=1:numpartition % EXTERNAL LOOP
         LL2 = NaN;
         LL3 = NaN;
         FateTypePart = 3;
+        TimeOutDomainPart=tspan(end); %or tsapn_chunk(i) IJR 14/02/24
         
       % In domain
       else      
@@ -771,7 +776,7 @@ for k=1:numpartition % EXTERNAL LOOP
           if conf.Traj.Verbose >= 2
             disp(['InLand, particle: ' num2str(part) ', i:' num2str(i)])
           end
-          TimeLandPart=tspan_chunk(i);
+          TimeLandPart=tspan_chunk(i); %or tspan(end)
           
           % Avoid particles higher than water surface (even if in land)
           if LL3>0.0 % 0, 0.1 flotteurs
@@ -828,6 +833,7 @@ for k=1:numpartition % EXTERNAL LOOP
               LastUpPart = (LL1-LastLL1)/TimeStepOut;  % => 0 is another option
               LastVpPart = (LL2-LastLL2)/TimeStepOut;  % => 0 is another option
               [LastUpPart,LastVpPart] = transformUScalar(LL1,LL2,LastUpPart,LastVpPart,conf.OGCM.Coordinates,-1); % convert to m/s
+              TimeSettlingPart=tspan(end);     %IJR 24/02/24        
             else
               LL3 = min([-Depth_partLonLat 0]); %min to avoid problems when interpolation near the coast
             end
@@ -852,7 +858,9 @@ for k=1:numpartition % EXTERNAL LOOP
     FateType(part) = FateTypePart;  
     LastUpOutput(part) = LastUpPart;
     LastVpOutput(part) = LastVpPart;
-    TimeLand(part) = TimeLandPart;   
+    TimeLand(part) = TimeLandPart; %IJR 14/02/24
+    TimeOutDomain(part) = TimeOutDomainPart; %IJR 14/02/24
+    TimeSettling(part) = TimeSettlingPart; %IJR 14/02/24
     PosWater1(part) = PosWater1Part;
     PosWater2(part) = PosWater2Part;
     PosWater3(part) = PosWater3Part;
@@ -898,6 +906,9 @@ for k=1:numpartition % EXTERNAL LOOP
   TRAJ.DepthBottomTraj = DepthBottomTraj; %Bottom depth along the particles trajectory
   TRAJ.FateType=FateType; %Fate type
   
+  TRAJ.TimeSettling=TimeSettling; %IJR 14/02/24
+  TRAJ.TimeOutDomain=TimeOutDomain; %IJR 14/02/24
+  TRAJ.TimeBeaching=TimeLand; %IJR 14/02/24
   
   % Saving trajectory
   try
@@ -960,15 +971,16 @@ TRAJ.FateType(TRAJ_chunk.TRAJ.FateType==1)={'Land'};
 TRAJ.FateType(TRAJ_chunk.TRAJ.FateType==2)={'Bottom'};
 TRAJ.FateType(TRAJ_chunk.TRAJ.FateType==3)={'OutDomain'};
 
+TRAJ.TimeSettling=TRAJ_chunk.TRAJ.TimeSettling;
+TRAJ.TimeBeaching=TRAJ_chunk.TRAJ.TimeBeaching;
+TRAJ.TimeOutDomain=TRAJ_chunk.TRAJ.TimeOutDomain;
+
 clear TRAJ_chunk
 
 
 % Initial and final positions and time of beaching, settling or outdomain
 TRAJ.InitialLonLatDepth = [TRAJ.Lon(:,1), TRAJ.Lat(:,1) TRAJ.Depth(:,1)];
 
-TRAJ.TimeBeaching=nan(numpar,1);
-TRAJ.TimeSettling=nan(numpar,1);
-TRAJ.TimeOutDomain=nan(numpar,1);
 for j=1:numpar
   Finalpos = find(isnan(TRAJ.Lat(j,:))); %Last position in water
   aux=find(diff(Finalpos)~=1);
@@ -979,14 +991,6 @@ for j=1:numpar
     TRAJ.FinalLonLatDepth(j,2) = TRAJ.Lat(j,Finalpos(1)-1);
     TRAJ.FinalLonLatDepth(j,3) = TRAJ.Depth(j,Finalpos(1)-1);
     
-    if strcmpi(TRAJ.FateType(j),'Land')
-      TRAJ.TimeBeaching(j)=TRAJ.TimeStamp(Finalpos(1)-1);
-    elseif strcmpi(TRAJ.FateType(j),'Bottom')
-      TRAJ.TimeSettling(j)=TRAJ.TimeStamp(Finalpos(1)-1);
-    elseif strcmpi(TRAJ.FateType(j),'OutDomain')
-      TRAJ.TimeOutDomain(j)=TRAJ.TimeStamp(Finalpos(1)-1);
-    end
-    
     TRAJ.TrajectoryDuration(j)=abs(TRAJ.TimeStamp(Finalpos(1)-1)-TRAJ.TimeStamp(1)); %days
     
   elseif ~isempty(aux) && isnan(TRAJ.Lon(j,end)) % for particles replace in water several times
@@ -994,14 +998,6 @@ for j=1:numpar
     TRAJ.FinalLonLatDepth(j,1) = TRAJ.Lon(j,Finalpos(aux(end)+1)-1);
     TRAJ.FinalLonLatDepth(j,2)= TRAJ.Lat(j,Finalpos(aux(end)+1)-1);
     TRAJ.FinalLonLatDepth(j,3)= TRAJ.Depth(j,Finalpos(aux(end)+1)-1);
-    
-    if strcmpi(TRAJ.FateType(j),'Land')
-      TRAJ.TimeBeaching(j)=TRAJ.TimeStamp(Finalpos(aux(end)+1)-1);
-    elseif strcmpi(TRAJ.FateType(j),'Bottom')
-      TRAJ.TimeSettling(j)=TRAJ.TimeStamp(Finalpos(aux(end)+1)-1);
-    elseif strcmpi(TRAJ.FateType(j),'OutDomain')
-      TRAJ.TimeOutDomain(j)=TRAJ.TimeStamp(Finalpos(aux(end)+1)-1);
-    end
     
     TRAJ.TrajectoryDuration(j)=abs(TRAJ.TimeStamp(Finalpos(aux(end)+1)-1)-TRAJ.TimeStamp(1)); %days
     
@@ -1024,7 +1020,8 @@ TRAJ.OutDomainParticles=length(find(strcmpi(TRAJ.FateType,'OutDomain')));
 
 % Other metadata
 TRAJ.conf = conf;
-%TRAJ.behaviour= Behaviour;
+Behaviour = behaviour(conf.Beh,TRAJ.TimeStamp,ReleaseTime); %IJR Feb24
+TRAJ.conf.Beh= Behaviour; %IJR Feb24
 
 TRAJ.Domain.x=xland;
 TRAJ.Domain.y=yland;

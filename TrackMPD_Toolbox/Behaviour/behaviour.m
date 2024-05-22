@@ -1,4 +1,4 @@
-function beh = behaviour_new(beh,tspan)
+function beh = behaviour(beh,tspan,ReleaseTime)
 
 %BEHAVIOR_NEW Caluclate the settling velocity over time from the physical
 %characteristics and behaviour of particles
@@ -57,7 +57,7 @@ elseif strcmpi(beh.InitialWsOption,'formulation') && strcmpi(beh.Biofouling,'Cte
     
 elseif strcmpi(beh.Biofouling,'Rate')  
    
-        beh.ParticleDensity=beh.ParticleDensity+ beh.BiofoulingRate*(tspan-tspan(1));
+        beh.ParticleDensity=beh.ParticleDensity+ beh.BiofoulingRate*(tspan-ReleaseTime); %IJR0424
         
         if strcmpi(beh.WsForm,'waldschlager') 
             beh.Ws=waldschlager(beh);
@@ -70,7 +70,7 @@ elseif strcmpi(beh.Biofouling,'Rate')
         end  
         
 elseif strcmpi(beh.InitialWsOption,'rate') && (strcmpi(beh.Biofouling,'no') || strcmpi(beh.Biofouling,'inWS'))
-    beh.Ws=beh.Ws0+beh.WsRate*(tspan-tspan(1));
+    beh.Ws=beh.Ws0+beh.WsRate*(tspan-ReleaseTime); %IJR0424
 else
     error('Options to define settling velocity and biofouling may be incompatibles')
 end
@@ -79,7 +79,7 @@ end
 % Degradation
 if strcmpi(beh.Degradation,'Rate')  % just available for waldschlager formulation for the moment
      
-    beh.ParticleDequi=beh.ParticleDequi+beh.ParticleDequi*beh.DegradationRate/100*(tspan-tspan(1));
+    beh.ParticleDequi=beh.ParticleDequi+beh.ParticleDequi*beh.DegradationRate/100*(tspan-ReleaseTime); %IJR0424
     beh.Ws=waldschlager(beh);
 end              
     
