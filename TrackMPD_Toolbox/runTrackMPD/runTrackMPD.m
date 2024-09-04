@@ -718,8 +718,10 @@ for k=1:numpartition % EXTERNAL LOOP
           [TurbHx, TurbHy, TurbV] = HTurb30(1,TimeStepCalc*24*60*60,'Kh',kh,'Kv',kv);
 
           if ~strcmpi(conf.OGCM.Coordinates,'cartesian')
-            dlnTur=km2deg(TurbHx/1000);
-            dltTur=km2deg(TurbHy/1000);
+            dlnTur=cosd(LL2)*(TurbHx/1000)/6371*180/pi; % VM 2024/04/05
+            dltTur=(TurbHy/1000)/6371*180/pi; % VM 2024/04/05
+%            dlnTur=km2deg(TurbHx/1000);
+%            dltTur=km2deg(TurbHy/1000);
           else
             dlnTur=TurbHx;
             dltTur=TurbHy;
