@@ -1,6 +1,6 @@
 function beh = behaviour(beh,tspan,ReleaseTime)
 
-%BEHAVIOR_NEW Caluclate the settling velocity over time from the physical
+%BEHAVIOR_NEW Calculate the settling velocity over time from the physical
 %characteristics and behaviour of particles
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

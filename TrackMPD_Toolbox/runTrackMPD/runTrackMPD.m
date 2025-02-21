@@ -5,8 +5,8 @@ function runTrackMPD(conf_name,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% 	$Id: runTrackMPD_3D.m 001 2018-02-12 10:55:10Z ef $
-%        Last version: 2023-03-10 vmarieu
+% 	$Id: runTrackMPD.m 001 2018-02-12 10:55:10Z ef $
+%        Last version: 2025-02-21 vmarieu
 %
 % Copyright (C) 2017-2019 Isabel Jalon-Rojas & Vincent Marieu 
 % Licence: GPL (Gnu Public License)
@@ -107,8 +107,8 @@ if strcmpi(conf.Traj.Resuspension,'yes')
     taucr1 = exp_hid(taucr1_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
     taucr2 = exp_hid(taucr2_,conf.Beh.ParticleDequi,conf.Beh.SediD50);
   elseif strcmpi(conf.Traj.ResOption,'value')
-      taucr1 = conf.Traj.tauc1;
-      taucr2 = conf.Traj.tauc2;
+      taucr1 = conf.Traj.taucr1;
+      taucr2 = conf.Traj.taucr2;
   end
 else
   taucr1 = 0.0; % Necessary for parallel computation even if not used
@@ -119,9 +119,9 @@ end
 if conf.Traj.Verbose >= 2
   disp('Domain and grid loading...')
 end
-domain=load(conf.Data.Domain);
-xland=domain(:,1);
-yland=domain(:,2);
+%domain=load(conf.Data.Domain);
+%xland=domain(:,1);
+%yland=domain(:,2);
 
 % Hydrodynamic model grid
 infogrid=load(fullfile(conf.Data.BaseDir,'grid.mat'));
@@ -245,6 +245,8 @@ numpartition = length(ichunk);
 FateType=zeros(numpar,1); %Initial region 0=water; 1=land; 2=bottom; 3=out of Domain
 LastUpInput=zeros(numpar,1);
 LastVpInput=zeros(numpar,1);
+DepthBottomTrajInput=zeros(numpar,1);
+EtaOnTrajInput=zeros(numpar,1);
 TimeLand=NaN(numpar,1);
 TimeOutDomain=NaN(numpar,1); %IJR 14/02/24
 TimeSettling=NaN(numpar,1); %IJR 14/02/24
@@ -354,7 +356,8 @@ for k=1:numpartition % EXTERNAL LOOP
     end
     
   end
-  
+  clear dataOGCM_aux
+
   % Velocity unit conversion from m/s to grid units
   if conf.Traj.Verbose >= 2
     disp('Velocity units conversion...')
@@ -459,6 +462,7 @@ for k=1:numpartition % EXTERNAL LOOP
   LastVpOutput = zeros(numpar,1);
   ts_Tot_Output = nan(numpar,len_tspan_chunk); %IJR22
   DepthBottomTraj = nan(numpar,len_tspan_chunk);
+  EtaOnTraj = nan(numpar,len_tspan_chunk);
   Duration = zeros(1,numpar);
   
   % First value = Release position
@@ -472,7 +476,13 @@ for k=1:numpartition % EXTERNAL LOOP
     ln_Tot_Input = par(:,1);
     lt_Tot_Input = par(:,2);
     h_Tot_Input = par(:,3);
-    DepthBottomTraj(:,1)=griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),ln_Tot_Output(:,1),lt_Tot_Output(:,1),'nearest'); %Bottom Depth at the release point
+
+    % Calculation of bottom depth and water level at the release position of the particles
+    InitDepthBottomTraj=-griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),ln_Tot_Output(:,1),lt_Tot_Output(:,1)); % Bottom Depth at the release point
+    [~,iTT]=min(abs(TT-ReleaseTime));
+    Eta = squeeze(Depth(:,:,1,iTT(1)));
+    InitEtaOnTraj=griddata(Lon(mask_water==1),Lat(mask_water==1),Eta(mask_water==1),ln_Tot_Output(:,1),lt_Tot_Output(:,1)); % Water level at the release point
+
     IniLoop=2;
   else
     IniLoop=1;
@@ -493,15 +503,21 @@ for k=1:numpartition % EXTERNAL LOOP
     h_Tot_Part = zeros(1,len_tspan_chunk);
     ts_Tot_Part = zeros(1,len_tspan_chunk);
     DepthBottomTrajPart = zeros(1,len_tspan_chunk);
+    EtaOnTrajPart = zeros(1,len_tspan_chunk);
     
     LL1 = ln_Tot_Input(part);
     LL2 = lt_Tot_Input(part);
     LL3 = h_Tot_Input(part);
+    DepthBottomTrajPart(1) = DepthBottomTrajInput(part);
+    EtaOnTrajPart(1) = EtaOnTrajInput(part);
+
     if IniLoop == 2
       ln_Tot_Part(1) = LL1;
       lt_Tot_Part(1) = LL2;
       h_Tot_Part(1) = LL3;
       ts_Tot_Part(1) = ReleaseTime;
+      DepthBottomTrajPart(1) = InitDepthBottomTraj(part);
+      EtaOnTrajPart(1) = InitEtaOnTraj(part);
     end
     FateTypePart = FateType(part);
     LastUpPart = LastUpInput(part);
@@ -523,6 +539,8 @@ for k=1:numpartition % EXTERNAL LOOP
     Up = 0;
     Vp = 0;
     Depth_partLonLat = 0.0;
+    Surf_partLonLat = 0.0;
+    Kvsh_partLonLat = 0.0;
     
     cont_timechunk=0; % counter of each time step of the chunk
     for i=IniLoop:length(tspan_chunk)  
@@ -567,22 +585,42 @@ for k=1:numpartition % EXTERNAL LOOP
         difDepth_partLonLat=interp3(longitude,latitude,TT,difDepth,PosBottom1Part,PosBottom2Part,tspan_chunk(i));
               
         if strcmpi(conf.Traj.KvOption,'fromOGCM')
-          Kvsh_partLonLat=interp2(longitude,latitude,TT,Kvsh,PosBottom1Part,PosBottom2Part,tspan_chunk(i));
+          Kvsh_partLonLat=interp3(longitude,latitude,TT,Kvsh,PosBottom1Part,PosBottom2Part,tspan_chunk(i));
         else
           Kvsh_partLonLat=conf.Traj.Kv;
         end
         
-        tau0=conf.Beh.WaterDensity*1000*Kvsh_partLonLat*UshAbs/difDepth_partLonLat;
-               
+        % Bed shear stress
+        % Modified by Marieu for v2.4 (2025/01/16), added log profile and option for WaveAdapted or Gaia formulation 
+        if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.BottomType,'Var') %Bottom varies with tide/time or morpho changes
+          Depth_partLonLat=-interp3(longitude,latitude,TT,squeeze(Depth(:,:,end,:)),PosBottom1Part,PosBottom2Part,tspan_chunk(i));
+        elseif strcmpi(conf.OGCM.VerticalLayer,'hybrid')
+          Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT)),PosBottom1Part,PosBottom2Part,tspan_chunk(i));
+        else
+          Depth_partLonLat=griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),PosBottom1Part,PosBottom2Part,'nearest'); %#ok<GRIDD> %For the idealized bay
+        end
+        U_star= UshAbs*(0.4/log(difDepth_partLonLat/conf.Traj.z0));  % von Karman constant == 0.4
+        if strcmpi(conf.Traj.Tau0Formula,'WaveAdapted')
+          tau0=conf.Beh.WaterDensity*1000*Kvsh_partLonLat*U_star/difDepth_partLonLat;
+        else
+          Fc = 2 * (0.4/log(11.036 * Depth_partLonLat / (conf.Traj.alpha*conf.Beh.SediD50)))^2; % Water height: Depth_partLonLat, Roughness length: ks=alpha*d50
+          tau0 = Fc*0.5*conf.Beh.WaterDensity*1000*(U_star^2); 
+        end    
+
         % Condition for resuspension
         if tau0 >= taucr2 
           if conf.Traj.Verbose >= 2
             disp(['Resuspension, particle: ' num2str(part) ', i:' num2str(i) ', Ush:' num2str(UshAbs) ', tau0:' num2str(tau0) ', taucr2:' num2str(taucr2)])
           end
-          % Resuspension => Particle get its last known position 
+          
+          % Eta at particle position
+          Surf_partLonLat=interp3(longitude,latitude,TT,squeeze(Depth(:,:,1,:)),PosBottom1Part,PosBottom2Part,tspan_chunk(i));
+
+          % Resuspension => the particle is lifted randomly between the bed and conf.Traj.HresMax, modified by Marieu for v2.4 (2025/01/16)
           LL1=PosBottom1Part; 
           LL2=PosBottom2Part;
-          LL3=PosBottom3Part; % Or option random value between bed and maximum height ?
+          LL3 = PosBottom3Part+rand(1,1)*conf.Traj.HresMax; 
+          LL3 = min(LL3,Surf_partLonLat) ; % Check if particle is higher than the surface                
           LastLL1=PosBottom1Part;
           LastLL2=PosBottom2Part;
           LastLL3=PosBottom3Part;
@@ -611,7 +649,9 @@ for k=1:numpartition % EXTERNAL LOOP
           if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.BottomType,'Var') %Bottom varies with tide/time or morpho changes
             Depth_partLonLat=-interp3(longitude,latitude,TT,squeeze(Depth(:,:,end,:)),PosBottom1Part,PosBottom2Part,tspan_chunk(i));
           elseif strcmpi(conf.OGCM.VerticalLayer,'hybrid')
-            Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT))+E,PosBottom1Part,PosBottom2Part,tspan_chunk(i));
+            % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+            %Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT))+E,PosBottom1Part,PosBottom2Part,tspan_chunk(i));
+            Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT)),PosBottom1Part,PosBottom2Part,tspan_chunk(i));
           else
             Depth_partLonLat=griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),PosBottom1Part,PosBottom2Part,'nearest'); %#ok<GRIDD> %For the idealized bay
           end
@@ -665,21 +705,10 @@ for k=1:numpartition % EXTERNAL LOOP
         end  
       end
       %   disp(['Ind2 : ' num2str(Ind2)])
-      Ind = Ind1(1):Ind2(1);
-      TTs = TT(Ind);  
-      Us = U(:,:,:,Ind);
-      Vs = V(:,:,:,Ind);
-      Ws = W(:,:,:,Ind);
-      Depths = Depth(:,:,:,Ind);
-      KHs = 0.0;
-      if strcmpi(conf.Traj.KhOption,'fromOGCM')
-        KHs = KH(:,:,:,Ind);
-      end
-      KVs = 0.0;
-      if strcmpi(conf.Traj.KvOption,'fromOGCM')
-        KVs = KV(:,:,:,Ind);
-      end
-      
+      TimeInd = Ind1(1):Ind2(1);
+      TTs = TT(TimeInd);  
+       
+
       % Particle in water => Advection and turbulence computation
       if FateTypePart==0
          
@@ -687,10 +716,10 @@ for k=1:numpartition % EXTERNAL LOOP
           
           % Advection
           if strcmpi(conf.Traj.Mode,'2D')
-            [ln_ADV,lt_ADV] = AdvectionSchemes2D(conf.Traj.Scheme,longitude,latitude,TTs,Us,Vs,LL1,LL2,tspan(jj-1),TimeStepCalc,direction);
+            [ln_ADV,lt_ADV] = AdvectionSchemes2D(conf.Traj.Scheme,longitude,latitude,TTs,U(:,:,:,TimeInd),V(:,:,:,TimeInd),LL1,LL2,tspan(jj-1),TimeStepCalc,direction,mask_water);
             h_ADV = 0.0;
           else
-            [ln_ADV,lt_ADV,h_ADV] = AdvectionSchemes(conf.Traj.Scheme,longitude,latitude,Depths,TTs,Us,Vs,Ws,LL1,LL2,LL3,tspan(jj-1),TimeStepCalc,direction);
+            [ln_ADV,lt_ADV,h_ADV] = AdvectionSchemes(conf.Traj.Scheme,longitude,latitude,Depth(:,:,:,TimeInd),TTs,U(:,:,:,TimeInd),V(:,:,:,TimeInd),W(:,:,:,TimeInd),LL1,LL2,LL3,tspan(jj-1),TimeStepCalc,direction,mask_water);
           end
 
           % CFL Check for advection, movement must be less than one grid cell
@@ -704,13 +733,12 @@ for k=1:numpartition % EXTERNAL LOOP
           
           % Turbulence
           if strcmpi(conf.Traj.KhOption,'fromOGCM')
-            kh=interpDispersion(longitude,latitude,Depths,TTs,KHs,[LL1 LL2 LL3],tspan(jj)); %IJR April 2020
-            % IJR22: To be checked!!!
+            kh=interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water); 
           else
             kh=conf.Traj.Kh;
           end
           if strcmpi(conf.Traj.KvOption,'fromOGCM')
-            kv=interpDispersion(longitude,latitude,Depths,TTs,KVs,[LL1 LL2 LL3],tspan(jj)); %IJR April 2020
+            kv=interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water); 
           else
             kv=conf.Traj.Kv;
           end
@@ -730,8 +758,8 @@ for k=1:numpartition % EXTERNAL LOOP
           % Behaviour/Sinking
           % Settling velocity at each time stamp
           if strcmpi(conf.Traj.Mode,'2D')
-            TurbV = 0.0
-            h_BEH = 0.0
+            TurbV = 0.0;
+            h_BEH = 0.0;
           else
             Behaviour = behaviour(conf.Beh,tspan,ReleaseTime); %IJR 0424
 			
@@ -767,11 +795,26 @@ for k=1:numpartition % EXTERNAL LOOP
         LL2 = NaN;
         LL3 = NaN;
         FateTypePart = 3;
-        TimeOutDomainPart=tspan(end); %or tsapn_chunk(i) IJR 14/02/24
+        TimeOutDomainPart=tspan(end); %or tspan_chunk(i) IJR 14/02/24
         
       % In domain
-      else      
-        inLand=inpolygon(LL1,LL2,xland,yland);
+      else 
+       
+        % MODIFIED BY MARIEU 2025-01-21, to be consistent with InterpTrackMPD.m and to accelerate the code
+        % inLand=inpolygon(LL1,LL2,xland,yland);
+        MaskWaterInterp = interp2(longitude,latitude,mask_water,LL1,LL2, 'linear' );
+        if MaskWaterInterp<0.2 
+          inLand = 1;
+        else
+          inLand = 0;
+        end
+     
+        % Surface altitude at particle position (to check that particle is in water)
+        if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.BottomType,'Var') || strcmpi(conf.OGCM.VerticalLayer,'hybrid')
+          Surf_partLonLat=interp3(longitude,latitude,TTs,squeeze(Depth(:,:,1,TimeInd)),LL1,LL2,tspan(end));
+        else
+          error('This coordinate system is not supported yet for surface calculation') 
+        end
         
         % In land (but not already inland), beaching tests
         if inLand==1 & FateTypePart~=1
@@ -780,9 +823,10 @@ for k=1:numpartition % EXTERNAL LOOP
           end
           TimeLandPart=tspan_chunk(i); %or tspan(end)
           
-          % Avoid particles higher than water surface (even if in land)
-          if LL3>0.0 % 0, 0.1 flotteurs
-            LL3=0.0;
+          % Avoid particles higher than water surface (even if in land) 
+          % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+          if LL3>Surf_partLonLat % 0, 0.1 flotteurs
+            LL3=Surf_partLonLat;
             if conf.Traj.Verbose >= 2
                disp(['Out of water, particle: ' num2str(part) ', i:' num2str(i)])
             end
@@ -791,39 +835,43 @@ for k=1:numpartition % EXTERNAL LOOP
           % Save the last position of particles in the water (for refloating)
           if strcmpi(conf.Traj.Beaching,'yes')==1            
             FateTypePart = 1;
-            Depth_partLonLat = 0.0;
+            %Depth_partLonLat = 0.0;
             PosWater1Part=LastLL1; 
             PosWater2Part=LastLL2; 
-            PosWater3Part=LastLL3;             
+            PosWater3Part=LastLL3;  
           else
             LL1 = LastLL1;
             LL2 = LastLL2;
             LL3 = LastLL3;
           end
         end 
-              
-        % Depth at particle position (to check deposition)
-        if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.BottomType,'Var') %Bottom varies with tide/time or morpho changes
-          Depth_partLonLat=-interp3(longitude,latitude,TTs,squeeze(Depths(:,:,end,:)),LL1,LL2,tspan(end));
-        elseif strcmpi(conf.OGCM.VerticalLayer,'hybrid')
-          Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT))+E,LL1,LL2,tspan(end));
-        else
-          Depth_partLonLat=griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),LL1,LL2,'nearest'); %#ok<GRIDD> %For the idealized bay
-        end
-        
+                  
         % In water
         if FateTypePart==0
           
+        % Depth at particle position (to check deposition)
+        if strcmpi(conf.OGCM.VerticalLayer,'sigma2depthVar') || strcmpi(conf.OGCM.BottomType,'Var') %Bottom varies with tide/time or morpho changes
+          Depth_partLonLat=-interp3(longitude,latitude,TTs,squeeze(Depth(:,:,end,TimeInd)),LL1,LL2,tspan(end));
+        elseif strcmpi(conf.OGCM.VerticalLayer,'hybrid')
+          % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+          %Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT))+E,LL1,LL2,tspan(end));
+          Depth_partLonLat=interp3(longitude,latitude,TT,repmat(H,1,1,length(TT)),LL1,LL2,tspan(end));
+        else
+          Depth_partLonLat=griddata(Lon(mask_water==1),Lat(mask_water==1),H(mask_water==1),LL1,LL2,'nearest'); %#ok<GRIDD> %For the idealized bay
+        end
+
           % Avoid particles higher than water surface
-          if LL3>0.0 % 0, 0.1 flotteurs
-            LL3=0.0;
+          % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+          if LL3>Surf_partLonLat % 0, 0.1 flotteurs
+            LL3=Surf_partLonLat;
             if conf.Traj.Verbose >= 2
                 disp(['Out of water, particle: ' num2str(part) ', i:' num2str(i)])
             end
           end
           
           % Deposition check
-          if abs(LL3)>=Depth_partLonLat && strcmpi(conf.Traj.Mode,'3D')==1 % IJR 2D
+          %disp(['LL3 : ' num2str(LL3) ', -Depth_partLonLat :' num2str(-Depth_partLonLat)])
+          if LL3<=-Depth_partLonLat && strcmpi(conf.Traj.Mode,'3D')==1 % IJR 2D
             if conf.Traj.Verbose >= 2
               disp(['Reaching the bed, particle: ' num2str(part) ', i:' num2str(i) ', at depth:' num2str(Depth_partLonLat,'%.2f') ', LL3: ' num2str(LL3,'%.2f')])
             end
@@ -831,6 +879,7 @@ for k=1:numpartition % EXTERNAL LOOP
               FateTypePart=2;
               PosBottom1Part=LL1;
               PosBottom2Part=LL2;
+              LL3 = -Depth_partLonLat;
               PosBottom3Part=-Depth_partLonLat;        % => other option ? 
               LastUpPart = (LL1-LastLL1)/TimeStepOut;  % => 0 is another option
               LastVpPart = (LL2-LastLL2)/TimeStepOut;  % => 0 is another option
@@ -844,8 +893,16 @@ for k=1:numpartition % EXTERNAL LOOP
       end
       
       % Save the bottom depth at each particle position
-      DepthBottomTrajPart(i)=Depth_partLonLat;     
-      
+      if FateTypePart==0 || FateTypePart==2
+        DepthBottomTrajPart(i)=Depth_partLonLat;     
+        EtaOnTrajPart(i) = Surf_partLonLat;
+      else
+        if i>1
+          DepthBottomTrajPart(i)=DepthBottomTrajPart(i-1);
+          EtaOnTrajPart(i) = EtaOnTrajPart(i-1);
+        end
+      end
+
       % Save trajectory position at output time step
       ln_Tot_Part(i)=LL1;
       lt_Tot_Part(i)=LL2;
@@ -853,6 +910,7 @@ for k=1:numpartition % EXTERNAL LOOP
       ts_Tot_Part(i)=tspan(end);
     end
     DepthBottomTraj(part,:) = DepthBottomTrajPart;
+    EtaOnTraj(part,:) = EtaOnTrajPart;
     ln_Tot_Output(part,:)=ln_Tot_Part;
     lt_Tot_Output(part,:)=lt_Tot_Part;
     h_Tot_Output(part,:)=h_Tot_Part;
@@ -876,6 +934,8 @@ for k=1:numpartition % EXTERNAL LOOP
   ln_Tot_Input=ln_Tot_Output(:,end);
   lt_Tot_Input=lt_Tot_Output(:,end);
   h_Tot_Input=h_Tot_Output(:,end);
+  DepthBottomTrajInput=DepthBottomTraj(:,end);
+  EtaOnTrajInput=EtaOnTraj(:,end);
   LastUpInput(:) = LastUpOutput(:);
   LastVpInput(:) = LastVpOutput(:);
   
@@ -905,6 +965,7 @@ for k=1:numpartition % EXTERNAL LOOP
   TRAJ.FinalLonLatDepth(:,2) = TRAJ.Lat(:,end);
   TRAJ.FinalLonLatDepth(:,3) = TRAJ.Depth(:,end);
   
+  TRAJ.EtaOnTraj = EtaOnTraj;% Surface height along the particles trajectory
   TRAJ.DepthBottomTraj = DepthBottomTraj; %Bottom depth along the particles trajectory
   TRAJ.FateType=FateType; %Fate type
   
@@ -959,6 +1020,7 @@ for i=1:chunk
   TRAJ.Depth(:,inipos:inipos+num_timestamps-1)=TRAJ_chunk.TRAJ.Depth;
   TRAJ.TimeStamp(:,inipos:inipos+num_timestamps-1)=TRAJ_chunk.TRAJ.TimeStamp;
   TRAJ.DepthBottomTraj(:,inipos:inipos+num_timestamps-1)=TRAJ_chunk.TRAJ.DepthBottomTraj;
+  TRAJ.EtaOnTraj(:,inipos:inipos+num_timestamps-1)=TRAJ_chunk.TRAJ.EtaOnTraj;
   
   inipos=inipos+num_timestamps;
   
@@ -1025,14 +1087,16 @@ TRAJ.conf = conf;
 Behaviour = behaviour(conf.Beh,TRAJ.TimeStamp,ReleaseTime); %IJR Feb24
 TRAJ.conf.Beh= Behaviour; %IJR Feb24
 
-TRAJ.Domain.x=xland;
-TRAJ.Domain.y=yland;
+% Not needed because MaskWater used instead
+%TRAJ.Domain.x=xland;
+%TRAJ.Domain.y=yland;
+TRAJ.Domain = mask_water;
 TRAJ.Grid=infogrid;
 
 
 % Save
 filename = fullfile(conf.Traj.BaseDir,strcat(conf.Traj.ScenarioName,'.mat'));
-save(filename,'TRAJ');
+save(filename,'TRAJ','-v7.3');
 
 fprintf('+++++++ Finished at: %s\n',datestr(now,0));
 disp('++++++++++++ $$$$$$$$$$$$$$$$$$ Exit $$$$$$$$$$$$$$$$ ++++++++++++')

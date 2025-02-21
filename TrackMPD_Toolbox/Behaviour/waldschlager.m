@@ -1,7 +1,7 @@
 % Raising velocity (Waldschlager and Schuttrumpf, 2019)
 % Isabel Jalón-Rojas 13/11/20
 
-function ws=waldschlager(beh);
+function ws=waldschlager(beh)
 
 n1=length(beh.ParticleDensity);
 n2=length(beh.ParticleDequi);
