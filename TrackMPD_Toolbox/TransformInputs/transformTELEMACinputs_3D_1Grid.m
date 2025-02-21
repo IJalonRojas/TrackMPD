@@ -1,4 +1,4 @@
-function transformTELEMACinputs_2D(conf_name,confOGCM_name)
+function transformTELEMACinputs_3D(conf_name,confOGCM_name)
 % TRANSFORM OGCM outputs (FURG TELEMAC version) to TrackMPD format
 % Itele and I.Jalon-Rojas  12 Nov 2019; based on LoadFVCOMFiles_3D
 
@@ -18,6 +18,7 @@ function transformTELEMACinputs_2D(conf_name,confOGCM_name)
 
 %% Call the model configuration and inputs files
 
+%conf=feval(conf_name); version 1
 conf=feval(conf_name);
 confOGCM=feval(confOGCM_name); %IJR new input format
 conf=mergeStructure(conf,confOGCM); %IJR new input format
@@ -41,7 +42,7 @@ numlat=conf.OGCM.NumLatGrid;
 data = telheadr(file); %le o resultado do telemac
 
 NumGridPts = data.NPOIN/data.NPLAN; 
-numlvl = 1; %data.NPLAN; %2D IJR 300123
+numlvl = data.NPLAN;
 NTimeStamps = data.NSTEPS;
  
 
@@ -87,11 +88,7 @@ end
 ti(ti==0)=NaN;
 mask_water=zeros(size(ti));
 mask_water(~isnan(ti))=1;
-mask_land = ~mask_water;
-mask_land3D = mask_land;
-for i=1:numlvl-1
-    mask_land3D = cat(3,mask_land3D,mask_land);
-end
+%mask_land = ~mask_water;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -116,20 +113,19 @@ for t = 1:NTimeStamps
     % Open data for each time step. data_t is updated each time
     data_t = telstepr(data_t,t);   
     
-    %depth unit: m
-    %for lv=1:numlvl %2D IJR 300123
-    lv=1; %2D IJR 300123
-        %DEPTH(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),1); %2D IJR 300123
-        UU(:,lv,t) = data_t.RESULT(NumGridPts*(data.NPLAN-lv)+1:NumGridPts*(data.NPLAN+1-lv),2);
-        VV(:,lv,t) = data_t.RESULT(NumGridPts*(data.NPLAN-lv)+1:NumGridPts*(data.NPLAN+1-lv),3);        
-    %end %2D IJR 300123
+    % depth unit: m
+    for lv=1:numlvl
+        DEPTH(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),1);
+        UU(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),2);   %velocities units = 'm/s'
+        VV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),3);
+        KVV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),7);
+%	      RHO(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),4);
+    end
     
 end
 
 % Calculate Bottom Depth from Depth (last layer, first time step)
-DEPTH_END = data_t.RESULT(NumGridPts*(data.NPLAN-data.NPLAN)+1:NumGridPts*(data.NPLAN+1-data.NPLAN),1); %2D IJR 300123
-%BottomDepth=griddata(x,y,DEPTH(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of Depth in the new grid
-BottomDepth=griddata(x,y,DEPTH_END(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest');  %2D IJR 300123
+BottomDepth=griddata(x,y,DEPTH(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of Depth in the new grid
 BottomDepth(mask_water==0)=NaN; %Land point=0
 %BottomDepth(isnan(BottomDepth))=1; 
 %BottomDepth=permute(BottomDepth,[2,1]); %lat lon
@@ -149,38 +145,45 @@ for i=1:NTimeStamps
     v=nan(numlat,numlon,numlvl);
     w=nan(numlat,numlon,numlvl);
     E=nan(numlat,numlon);
-    BottomDepth=nan(numlat,numlon);
     
     % 3D variables
+    % Bilinear interpolation generates values everywhere because there is
+    % no grid cell outside of the domain for unstructured meshes => No NaN in interpolated values 
+    
     for j=1:numlvl
         Uaux=griddata(x,y,UU(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
-        Uaux(mask_water==0)=0; %Land point=0
-        Uaux(isnan(Uaux))=0; 
+        %Uaux(mask_water==0)=0; %Land point=0
+        %Uaux(isnan(Uaux))=0; 
         u(:,:,j)=Uaux;
 
         Vaux=griddata(x,y,VV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
-        Vaux(mask_water==0)=0;
-        Vaux(isnan(Vaux))=0; 
+        %Vaux(mask_water==0)=0;
+        %Vaux(isnan(Vaux))=0; 
         v(:,:,j)=Vaux;
         
-        %Depth_aux=griddata(x,y,DEPTH(:,j,i),Lon_matrix,Lat_matrix,'linear'); %2D IJR 300123
-        %Depth_aux(mask_water==0)=NaN; %Land point=NaN%2D IJR 300123
-        %depth(:,:,j)=Depth_aux; %2D IJR 300123
+        KVaux=griddata(x,y,KVV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of KV in the new grid
+        kv(:,:,j)=KVaux;
+	
+%        RHOaux=griddata(x,y,RHO(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of RHO in the new grid
+%        rho(:,:,j)=RHOaux;
         
-        depth(:,:,j)=-1; %2D IJR 300123
-        %depth(mask_water==0)=NaN; %2D IJR 300123
+        % MODIFIED BY MARIEU 2025/01 for interpolation close to the shore
+        Depth_aux=griddata(x,y,DEPTH(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid        
+        % Depth_aux(mask_water==0)=NaN; %Land point=NaN
+        % Depth_aux(isnan(Depth_aux))=1;
+        Depth_aux(isnan(Depth_aux))= griddata(x,y,DEPTH(:,j,i),Lon_matrix(isnan(Depth_aux)),Lat_matrix(isnan(Depth_aux)),'nearest');
+        depth(:,:,j)=Depth_aux;
         
-        clear Uaux Vaux Depth_aux
+        clear Uaux Vaux Depth_aux KVaux
+        %clear Uaux Vaux Depth_aux RHOaux KVaux
     end
     
     w=zeros(size(u));
     
     %2D variables
     
-    %E=depth(:,:,1); %2D IJR 300123
-    %BottomDepth=depth(:,:,end); %2D IJR 300123
-    
-    E=data_t.RESULT(NumGridPts*(data.NPLAN-1)+1:NumGridPts*(data.NPLAN+1-1),1); %2D IJR 300123
+    E=depth(:,:,1);
+    BottomDepth=depth(:,:,end);
     
     
     %1D variables: time
@@ -194,9 +197,15 @@ for i=1:NTimeStamps
     v=v*100;
     w=w*100;
     
+    % From relative density into density 
+%    rho=(rho*1025)+1025;
+%    rho= rho/1000;   % From kg/m^3 into g/cm^3
+   
+    
+    
+    % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
     %Change in the reference system (surface constant, varying bottom)
-    %depth=depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the
-    %reference system (surface constant, varying bottom) %2D IJR 300123
+    %depth=depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the reference system (surface constant, varying bottom)
     
     % Land point ==1 for TrackMPD
     % REMOVED BY MARIEU 2025/01 for interpolation close to the shore
@@ -221,8 +230,8 @@ for i=1:NTimeStamps
 
 
     % save data for each time step 
-    save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','E','time','time_str','depth','BottomDepth');
-    
+    save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','kv','E','time','time_str','depth','BottomDepth');
+    %save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','kv','rho','E','time','time_str','depth','BottomDepth');
 end
 
 end

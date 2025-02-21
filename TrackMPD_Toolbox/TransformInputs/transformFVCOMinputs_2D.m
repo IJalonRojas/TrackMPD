@@ -109,17 +109,14 @@ end
 % (water/land) mask
 mask_water=zeros(size(ti));
 mask_water(~isnan(ti))=1;
-mask_land = ~mask_water;
 
-mask_land3D = mask_land;
-for i=1:numlvl-1
-    mask_land3D = cat(3,mask_land3D,mask_land);
-end
 
 %Bottom Depth
 h=double(ncread(file,'h'));
-BottomDepth=double(griddata(x,y,h,Lon_matrix,Lat_matrix,'nearest')); % Interpolation of U in the new grid
-BottomDepth(mask_water==0)=NaN; %Land=NaN
+% CHANGED BY MARIEU 2025/01 for interpolation close to the shore
+BottomDepth=double(griddata(x,y,h,Lon_matrix,Lat_matrix,'linear')); % Interpolation of U in the new grid
+BottomDepth(isnan(BottomDepth))=double(griddata(x,y,h,Lon_matrix(isnan(BottomDepth)),Lat_matrix(isnan(BottomDepth)),'nearest')); 
+%BottomDepth(mask_water==0)=NaN; %Land=NaN
 
 % Verification plot
 figure;
@@ -171,13 +168,13 @@ for i=1:NTimeStamps
     
     % 2D variables
     for j=level
-        Uaux=griddata(lon_v,lat_v,UU(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-        Uaux(mask_water==0)=0; %Land point=0
+        Uaux=griddata(lon_v,lat_v,UU(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+        %Uaux(mask_water==0)=0; %Land point=0
         Uaux(isnan(Uaux))=0; 
         u(:,:,j)=Uaux;
 
-        Vaux=griddata(lon_v,lat_v,VV(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-        Vaux(mask_water==0)=0; 
+        Vaux=griddata(lon_v,lat_v,VV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+        %Vaux(mask_water==0)=0;
         Vaux(isnan(Vaux))=0; 
         v(:,:,j)=Vaux;
         
@@ -194,12 +191,11 @@ for i=1:NTimeStamps
         clear Uaux Vaux
     end
     
-    ELEaux=double(griddata(x,y,ele(:,i),Lon_matrix,Lat_matrix,'nearest')); % Interpolation of U in the new grid
-    ELEaux(mask_water==0)=0; %Land point=0
-    ELEaux(isnan(ELEaux))=0; 
-    E(:,:)=ELEaux;
-   
-    clear ELEaux
+
+    %2D variables: elevation
+    E=double(griddata(x,y,ele(:,i),Lon_matrix,Lat_matrix,'linear')); % Interpolation of U in the new grid
+    E(mask_water==0)=NaN; %Land point=0
+    E(isnan(E))=griddata(x,y,ele(:,i),Lon_matrix(isnan(E)),Lat_matrix(isnan(E)),'nearest'));  
     
     %1D variables: time
     time=timestamps(i);

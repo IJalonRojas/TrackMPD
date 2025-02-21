@@ -96,12 +96,12 @@ mask2=~i;
 mask=double(mask & mask2);
 mask_water = mask;
 mask_water(mask_water~=0)=1;
-mask_land = ~mask_water;
+%mask_land = ~mask_water;
 
-mask_land3D = mask_land;
-for i=1:length(lvl)-1
-    mask_land3D = cat(3,mask_land3D,mask_land);
-end
+% mask_land3D = mask_land;
+% for i=1:length(lvl)-1
+%     mask_land3D = cat(3,mask_land3D,mask_land);
+% end
 
 %BottomDepth(mask_land)=NaN;
 
@@ -158,16 +158,20 @@ for n=1:nTimeStamps
     
 % Depth at each grid point 
 
-    BottomDepth(BottomDepth==1)=NaN;
-    E(E==0)=NaN;
+    % MODIFIED BY MARIEU 2025/01 for interpolation close to the shore
+    %BottomDepth(BottomDepth==1)=NaN;
+    %E(E==0)=NaN;
     
     depth=nan(numlon,numlat,numlvl+1);
     for i=1:length(ZZ)
         depth(:,:,i)=ZZ(i)*(BottomDepth+E)+E;
-        depth(:,:,i)=depth(:,:,i)-E; % We change the reference system:
+       
+        % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+        %depth(:,:,i)=depth(:,:,i)-E; % We change the reference system:
                               %Surface: depth=0, bottom changing with tide
     end
     
+    % MODIFIED BY MARIEU 2025/01 for interpolation close to the shore
     depth(isnan(depth))=1;
     E(isnan(E))=0;
     

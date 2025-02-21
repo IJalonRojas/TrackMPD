@@ -106,7 +106,7 @@ mask_water = double(ncread(ncfile,'mask'));
 mask_water = mask_water(:,:,end).'; % surface
 %mesh(fLon.',fLat.',mask_water); % show the watermask for sanity check '
 mask_water = mask_water(pos1Lat:posEndLat,pos1Lon:posEndLon);
-mask_land = ~mask_water;
+%mask_land = ~mask_water;
 
 BottomDepth = double(ncread(ncfile,'bathymetry'));
 BottomDepth = BottomDepth.'; %'
@@ -196,7 +196,8 @@ for n=1:nFiles
         
         depth = cat(3,depth,-cartesian_depth(:,:,2:end)); %IJR14Nov19 cartasian_depth must be negative
                                                           % IJR 030420 from the second layer
-        depth = depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the reference system (surface constant, varying bottom)
+        % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+        %depth = depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the reference system (surface constant, varying bottom)
         
     	file_index = total_outfiles + 1 - count;
 

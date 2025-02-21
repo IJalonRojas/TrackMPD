@@ -23,7 +23,6 @@ conf=mergeStructure(conf,confOGCM); %IJR new input format
 file = conf.OGCM.MARSFile;
 domain=load(conf.Data.Domain);
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TO AVOID MEMORY PROBLEMS: we will save one output file with the new format 
 % for each OGCM model time step (the OGCM model time step is defined inside conf)
 
@@ -86,7 +85,7 @@ save(fullfile(conf.Data.BaseDir,'grid.mat'),'Lat','Lon','BottomDepth','mask_wate
 fprintf('saving grid\n');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Read and save Time information    
+%% Read and save Time information
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 timestamps=ncread(file,'time')/(3600*24)+datenum(1900,1,1,0,0,0);

@@ -111,17 +111,13 @@ siglev=double(ncread(file,'siglev'));
 % (water/land) mask
 mask_water=zeros(size(ti));
 mask_water(~isnan(ti))=1;
-mask_land = ~mask_water;
-
-mask_land3D = mask_land;
-for i=1:numlvl-1
-    mask_land3D = cat(3,mask_land3D,mask_land);
-end
 
 %Bottom Depth
 h=double(ncread(file,'h'));
-BottomDepth=double(griddata(x,y,h,Lon_matrix,Lat_matrix,'nearest')); % Interpolation of U in the new grid
-BottomDepth(mask_water==0)=NaN; %Land=NaN
+% CHANGED BY MARIEU 2025/01 for interpolation close to the shore
+BottomDepth=double(griddata(x,y,h,Lon_matrix,Lat_matrix,'linear')); % Interpolation of U in the new grid
+BottomDepth(isnan(BottomDepth))=double(griddata(x,y,h,Lon_matrix(isnan(BottomDepth)),Lat_matrix(isnan(BottomDepth)),'nearest')); 
+%BottomDepth(mask_water==0)=NaN; %Land=NaN
 
 % Verification plot
 figure;
@@ -178,33 +174,30 @@ for i=1:NTimeStamps
     
     % 3D variables
     for j=1:numlvl
-        Uaux=griddata(lon_v,lat_v,UU(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-        Uaux(mask_water==0)=0; %Land point=0
+        Uaux=griddata(lon_v,lat_v,UU(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+        %Uaux(mask_water==0)=0; %Land point=0
         Uaux(isnan(Uaux))=0; 
         u(:,:,j)=Uaux;
 
-        Vaux=griddata(lon_v,lat_v,VV(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-        Vaux(mask_water==0)=0;
+        Vaux=griddata(lon_v,lat_v,VV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+        %Vaux(mask_water==0)=0;
         Vaux(isnan(Vaux))=0; 
         v(:,:,j)=Vaux;
         
-        Waux=griddata(lon_v,lat_v,WW(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-        Waux(mask_water==0)=0; 
+        Waux=griddata(lon_v,lat_v,WW(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+        %Waux(mask_water==0)=0; 
         Waux(isnan(Waux))=0; 
         w(:,:,j)=Waux;
         
         clear Uaux Vaux Waux
     end
     
-    
+
     %2D variables: elevation
-    ELEaux=double(griddata(x,y,ele(:,i),Lon_matrix,Lat_matrix,'nearest')); % Interpolation of U in the new grid
-    ELEaux(mask_water==0)=0; %Land point=0
-    ELEaux(isnan(ELEaux))=0; 
-    E(:,:)=ELEaux;
-   
+    E=double(griddata(x,y,ele(:,i),Lon_matrix,Lat_matrix,'linear')); % Interpolation of U in the new grid
+    E(mask_water==0)=NaN; %Land point=0
+    E(isnan(E))=griddata(x,y,ele(:,i),Lon_matrix(isnan(E)),Lat_matrix(isnan(E)),'nearest'));  
     
-    clear ELEaux
       
     %1D variables: time
     time=timestamps(i);
@@ -221,12 +214,15 @@ for i=1:NTimeStamps
     
     % Depth calculation
     sigma=[0 siglay(1,:) -1];
-    BottomDepth(BottomDepth==0)=NaN;
+    % REMOVED BY MARIEU 2025/01 for interpolation close to the shore
+    % BottomDepth(BottomDepth==0)=NaN;
       for sig=1:numlvl+2
-        depth(:,:,sig)=(BottomDepth+E).*sigma(1,sig); %+ele-ele (-ele to make depth=0 at surface waters)
+        % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
+        depth(:,:,sig)=(BottomDepth+E).*sigma(1,sig)+E; %+ele-ele (-ele to make depth=0 at surface waters)
       end
       
-      depth(isnan(depth))=1;
+     % REMOVED BY MARIEU 2025/01 for interpolation close to the shore
+     % depth(isnan(depth))=1;
     
     % Include a layer for surface and bottom  
     u=cat(3,u(:,:,1),u,zeros_matrix);
@@ -238,8 +234,9 @@ for i=1:NTimeStamps
    
        if strcmpi(conf.Traj.KhOption,'fromOGCM')
         for j=1:length(siglev(1,:))
-            KHaux=griddata(x,y,KH(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-            KHaux(mask_water==0)=NaN; %Land point=0
+            KHaux=griddata(x,y,KH(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+            KHaux(isnan(KHaux))=griddata(x,y,KH(:,j,i),Lon_matrix(isnan(KHaux)),Lat_matrix(isnan(KHaux)),'nearest'); 
+            % KHaux(mask_water==0)=NaN; %Land point=0
             Kh(:,:,j)=KHaux;
             clear KHaux
         end
@@ -258,8 +255,9 @@ for i=1:NTimeStamps
         
         if strcmpi(conf.Traj.KvOption,'fromOGCM')
             for j=1:length(siglev(1,:))
-                KVaux=griddata(x,y,KV(:,j,i),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of U in the new grid
-                KVaux(mask_water==0)=NaN; %Land point=0
+                KVaux=griddata(x,y,KV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
+                KVaux(isnan(KVaux))=griddata(x,y,KV(:,j,i),Lon_matrix(isnan(KVaux)),Lat_matrix(isnan(KVaux)),'nearest');
+                %KVaux(mask_water==0)=NaN; %Land point=0
                 Kv(:,:,j)=KVaux;
                 clear KVaux
             end

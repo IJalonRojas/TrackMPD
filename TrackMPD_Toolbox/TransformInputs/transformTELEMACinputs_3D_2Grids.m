@@ -33,8 +33,17 @@ t0=conf.OGCM.t0; %TELEMAC reference time variable (first time step)
 
 %% Define model parameters 
 
-numlon=conf.OGCM.NumLonGrid; 
-numlat=conf.OGCM.NumLatGrid;
+%numlon=conf.OGCM.NumLonGrid; 
+%numlat=conf.OGCM.NumLatGrid;
+
+
+numlon1=conf.OGCM.NumLonGrid1; %100
+numlon2=conf.OGCM.NumLonGrid2; %1200 
+numlat1=conf.OGCM.NumLatGrid1; %1400
+numlat2=conf.OGCM.NumLatGrid2; %100
+
+intLat=conf.OGCM.intLat;
+intLon=conf.OGCM.intLon;
 
 
 % Read TELEMAC data
@@ -71,33 +80,37 @@ end
 
 % Tranformation to rectangular grid
 
-Lat=linspace(minLat,maxLat,numlat);
-Lon=linspace(minLon,maxLon,numlon);
+%Lat=linspace(minLat,maxLat,numlat);
+%Lon=linspace(minLon,maxLon,numlon);
+
+
+
+Lat1=linspace(minLat,intLat,numlat1);
+Lat2=linspace(intLat,maxLat,numlat2);
+Lon1=linspace(minLon,intLon,numlon1);
+Lon2=linspace(intLon,maxLon,numlon2);
+
+numlat= numlat1+numlat2-1;
+numlon= numlon1+numlon2-1;
+
+Lat= [Lat1 Lat2(:,2:end)];
+Lon= [Lon1 Lon2(:,2:end)]; 
 
 [Lon_matrix,Lat_matrix]=meshgrid(Lon,Lat);
 
 
+% (water/land) mask
+% Fixed => Not updated at each time step
 ti=ones(size(Lon_matrix));
-
 for i=1:numlat
     for j=1:numlon
-
         ti(i,j) = ~inpolygon(Lon(j),Lat(i),domain(:,1),domain(:,2)); %ti=0-->Land point
-
     end
 end
-
 ti(ti==0)=NaN;
-
-% (water/land) mask
 mask_water=zeros(size(ti));
 mask_water(~isnan(ti))=1;
-mask_land = ~mask_water;
-
-mask_land3D = mask_land;
-for i=1:numlvl-1
-    mask_land3D = cat(3,mask_land3D,mask_land);
-end
+%mask_land = ~mask_water;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -117,23 +130,23 @@ fprintf('saving timestamps\n');
 % Read variables (NumGridPts,layer)
 data_t=data;
 
-for t = 1:NTimeStamps %carrega p/cada timestep
+for t = 1:NTimeStamps 
  
-    % Open data for each time step
-    data_t = telstepr(data_t,t); %carrega p/cada timestep   
+    % Open data for each time step. data_t is updated each time
+    data_t = telstepr(data_t,t);   
     
-    %depth unit: m
+    % depth unit: m
     for lv=1:numlvl
         DEPTH(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),1);
-        UU(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),2);
+        UU(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),2);   %velocities units = 'm/s'
         VV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),3);
-        %velocities units = 'm/s'
+        KVV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),7);
+%	      RHO(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),4);
     end
     
 end
 
 % Calculate Bottom Depth from Depth (last layer, first time step)
-
 BottomDepth=griddata(x,y,DEPTH(:,numlvl,1),Lon_matrix,Lat_matrix,'nearest'); % Interpolation of Depth in the new grid
 BottomDepth(mask_water==0)=NaN; %Land point=0
 %BottomDepth(isnan(BottomDepth))=1; 
@@ -154,26 +167,37 @@ for i=1:NTimeStamps
     v=nan(numlat,numlon,numlvl);
     w=nan(numlat,numlon,numlvl);
     E=nan(numlat,numlon);
-    BottomDepth=nan(numlat,numlon);
     
     % 3D variables
+    % Bilinear interpolation generates values everywhere because there is
+    % no grid cell outside of the domain for unstructured meshes => No NaN in interpolated values 
+    
     for j=1:numlvl
         Uaux=griddata(x,y,UU(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
-        Uaux(mask_water==0)=0; %Land point=0
-        Uaux(isnan(Uaux))=0; 
+        %Uaux(mask_water==0)=0; %Land point=0
+        %Uaux(isnan(Uaux))=0; 
         u(:,:,j)=Uaux;
 
         Vaux=griddata(x,y,VV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
-        Vaux(mask_water==0)=0;
-        Vaux(isnan(Vaux))=0; 
+        %Vaux(mask_water==0)=0;
+        %Vaux(isnan(Vaux))=0; 
         v(:,:,j)=Vaux;
         
-        Depth_aux=griddata(x,y,DEPTH(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid
-        Depth_aux(mask_water==0)=NaN; %Land point=NaN
-       % Depth_aux(isnan(Depth_aux))=1; 
+        KVaux=griddata(x,y,KVV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of KV in the new grid
+        kv(:,:,j)=KVaux;
+	
+%        RHOaux=griddata(x,y,RHO(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of RHO in the new grid
+%        rho(:,:,j)=RHOaux;
+        
+        % MODIFIED BY MARIEU 2025/01 for interpolation close to the shore
+        Depth_aux=griddata(x,y,DEPTH(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of U in the new grid        
+        % Depth_aux(mask_water==0)=NaN; %Land point=NaN
+        % Depth_aux(isnan(Depth_aux))=1;
+        Depth_aux(isnan(Depth_aux))= griddata(x,y,DEPTH(:,j,i),Lon_matrix(isnan(Depth_aux)),Lat_matrix(isnan(Depth_aux)),'nearest');
         depth(:,:,j)=Depth_aux;
         
-        clear Uaux Vaux Depth_aux
+        clear Uaux Vaux Depth_aux KVaux
+        %clear Uaux Vaux Depth_aux RHOaux KVaux
     end
     
     w=zeros(size(u));
@@ -195,11 +219,19 @@ for i=1:NTimeStamps
     v=v*100;
     w=w*100;
     
+    % From relative density into density 
+%    rho=(rho*1025)+1025;
+%    rho= rho/1000;   % From kg/m^3 into g/cm^3
+   
+    
+    
+    % OLD REFERENCE SYSTEM REMOVED BY V. MARIEU, 2024/09/10
     %Change in the reference system (surface constant, varying bottom)
-    depth=depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the reference system (surface constant, varying bottom)
+    %depth=depth-repmat(depth(:,:,1),[1,1,size(depth,3)]); %Change in the reference system (surface constant, varying bottom)
     
     % Land point ==1 for TrackMPD
-    depth(isnan(depth))=1; 
+    % REMOVED BY MARIEU 2025/01 for interpolation close to the shore
+    %depth(isnan(depth))=1; 
     
     % change dimensions from lon,lat,z to lat,lon,z
 %     u=permute(u,[2,1,3]); %lat,lon,z
@@ -208,18 +240,20 @@ for i=1:NTimeStamps
 %     depth=permute(depth,[2,1,3]); %lat,lon
 %     E=permute(E,[2,1]);
     
-    for ii=1:numlat
-        for jj=1:numlon
-            if sum(depth(ii,jj,:))==0
-                depth(ii,jj,:)=1;
-            end
-        end
-    end
+    % MODIFIED BY MARIEU 2025/01 for interpolation close to the shore
+    %for ii=1:numlat
+    %    for jj=1:numlon
+    %        if sum(depth(ii,jj,:))==0
+    %            depth(ii,jj,:)=1;
+    %        end
+    %    end
+    %end
 
 
 
     % save data for each time step 
-    save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','E','time','time_str','depth','BottomDepth');
+    save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','kv','E','time','time_str','depth','BottomDepth');
+    %save([conf.Data.BaseDir '/TrackMPDInput' num2str(i) '.mat'],'u','v','w','kv','rho','E','time','time_str','depth','BottomDepth');
     
 end
 
