@@ -32,7 +32,7 @@ elseif strcmpi(OGCMmodel_name,'FVCOM') && strcmpi(Mode,'2D')
     transformFVCOMinputs_2D(conf_name,confOGCM_name)
     
 elseif strcmpi(OGCMmodel_name,'TELEMAC') && strcmpi(Mode,'3D')
-    transformTELEMACinputs_3D(conf_name,confOGCM_name)
+    transformTELEMACinputs_3D_1Grid(conf_name,confOGCM_name)
     
 elseif strcmpi(OGCMmodel_name,'TELEMAC') && strcmpi(Mode,'2D')
     transformTELEMACinputs_2D(conf_name,confOGCM_name)
