@@ -71,6 +71,7 @@ Running TrackMPD requires very little knowledge of MATLAB or programming in gene
 # License and terms of use
 
 When using TrackMPD in any scientific publication, technical report or otherwise formal writing, please cite our papers:
+
 Jalón-Rojas, I., Wang, X.H., Fredj, E., 2019. “A 3D numerical model to Track Marine Plastic Debris (TrackMPD): Sensitivity of microplastic trajectories and fates to particle dynamical properties and physical processes”. Marine Pollution Bulletin, 141, 256-272.
 
 
