@@ -7,6 +7,7 @@ path_data='Outputs';
 
 FileList = dir([path_data '/Gironde*.mat']);
 
+domain=load('InputData2D/coastline_Gironde.txt');
 
 for i=1:length(FileList)
   filename = FileList(i).name;
@@ -36,7 +37,7 @@ for i=1:length(FileList)
   figure('units','normalized','outerposition',[0.1+0.05*(i-1) 0.1 0.5 0.6]);
   
   %plot domain
-  fill(TRAJ.Domain.x,TRAJ.Domain.y,[0.8 0.8 0.8]);
+  fill(domain(:,1),domain(:,2),[0.8 0.8 0.8]);
   hold on;
   Opt.Marker = 'o';
   Opt.MarkerSize = 6;
