@@ -9,6 +9,13 @@ Modified from Jalón-Rojas et al. (2019). Refer to this publication for further d
 
 # TrackMPD versions
 
+- TrackMPD_v3:
+     * Same reference system as hydrodynamic models
+     * New parameterizations for resuspension
+     * New beaching calculation 
+     * Water level over the particle's position is now saved in the output file
+
+
 - TrackMPD_v2:
 
      * Parallel computation of particle trajectories
@@ -27,21 +34,25 @@ Modified from Jalón-Rojas et al. (2019). Refer to this publication for further d
 
 Several options are provided to learn to work with TrackMPD.
 
-- A getting-started tutorial for TrackMPD_v2 will be uploaded to GitHub soon. The tutorial of TrackMPD_v1 is already availale.
+- Full tutorial for TrackMPD v2.3 and TrackMPD v3.0.
+
+- A getting-started tutorial of TrackMPD v1.
 
 - Example input files linked to (scientific) publications or other applications of the model — see folder Examples:
 	
-For TrackMPD_v2:
+For TrackMPD v2 and v3:
 
 * HYCOM Application in the Ría de Arousa (Spain)
 
 * TELEMAC Application in the GAronne tidal River
 
+- Our paper "A wave-resolving two-dimensional vertical Lagrangian approach to model microplastic transport in nearshore waters based on TrackMPD 3.0" is published and availbe [here.](https://gmd.copernicus.org/articles/18/319/2025/) 
+
 For TrackMPD_v1:
 
 * POM Application: Jalón-Rojas, I., Wang, X.-H., and Fredj, E. (2019). Technical note: On the importance of a three-dimensional approach for modelling the transport of neustic microplastics, Ocean Sci., 15, 717-724, https://doi.org/10.5194/os-15-717-2019.
 
-	* FVCOM Application: Cheng, Z., Jalón-Rojas, I., Wang, X.H., Liu, Y. (2020). Impacts of land reclamation on sediment transport and sedimentary environment in a macro-tidal estuary, Estuar. Coast. Shelf Sci., 221, 106861. doi: https://doi.org/10.1016/j.ecss.2020.106861.
+* FVCOM Application: Cheng, Z., Jalón-Rojas, I., Wang, X.H., Liu, Y. (2020). Impacts of land reclamation on sediment transport and sedimentary environment in a macro-tidal estuary, Estuar. Coast. Shelf Sci., 221, 106861. doi: https://doi.org/10.1016/j.ecss.2020.106861.
 
 
 - Our paper “A 3D numerical model to Track Marine Plastic Debris (TrackMPD): Sensitivity of microplastic trajectories and fates to particle dynamical properties and physical processes” is published and available via [this link](https://www.sciencedirect.com/science/article/pii/S0025326X19301523) or [this one] (http://isabeljalonrojas.com/wp-content/uploads/2019/09/2019_mpb_JalonRojasetal.pdf).
@@ -52,32 +63,36 @@ For TrackMPD_v1:
 
 TrackMPD is developed for MATLAB. We recommend installing the [M_MAP toolbox](https://www.eoas.ubc.ca/~rich/map.html#9._Zoom_in_on_Prince_Edward_Island_to_co) or the function “m_fdist” of this toolbox before using TrackMPD.
  
-TrackMPD_v2 requires the installation of the Matlab Parallel Toolbox.
+TrackMPD_v2 and TrackmPD_v3 requires the installation of the Matlab Parallel Toolbox.
 
 Running TrackMPD requires very little knowledge of MATLAB or programming in general. Users might, however, need to use TrackMPD with a specific hydrodynamic model, which requires more advanced knowledge of MATLAB. Authors are happy to help users to make TrackMPD compatible with different hydrodynamic models.
 
 
 # License and terms of use
 
-When using TrackMPD in any scientific publication, technical report or otherwise formal writing, please cite our paper:
+When using TrackMPD in any scientific publication, technical report or otherwise formal writing, please cite our papers:
 Jalón-Rojas, I., Wang, X.H., Fredj, E., 2019. “A 3D numerical model to Track Marine Plastic Debris (TrackMPD): Sensitivity of microplastic trajectories and fates to particle dynamical properties and physical processes”. Marine Pollution Bulletin, 141, 256-272.
+
+
+
+Jalón-Rojas, I., Sous, D., and Marieu, V., 2025. "A wave-resolving two-dimensional vertical Lagrangian approach to model microplastic transport in nearshore waters based on TrackMPD 3.0", Geosci. Model Dev., 18, 319–336, https://doi.org/10.5194/gmd-18-319-2025 
 
 The TrackMPD code is licensed under GPL (GNU General Public License). In summary, this means that the code is open source and may be used freely for non-commercial and commercial purposes. Any alterations to the TrackMPD source code or new modules must be licensed under GPL as well. See the LICENSE.md.
 
 
 # Authors
 
-TrackMPD_v2: 
+TrackMPD v2.3 and v3.0: 
 
 * Isabel Jalón-Rojas: Main developer, responsible for the model core and the behaviour, settling, washing-off, deposition-resuspension and bedload modules. 
 
 * Vincent Marieu: Main developer, responsible for the advection module and the parallel computation. 
 
 
-TrackMPD_v1:
+TrackMPD v1:
 
-* Erick Fredj: Main developer, responsible for the advection, dispersion and output modules based on the Particle Tracking and Analysis Toolbox (PaTATO, Fredj et al., 2016) (erick.fredj@gmail.com).
 * Isabel Jalón-Rojas: Main developer, responsible for the model core, and the behaviour, settling and washing-off modules (ijalonrojas@gmail.com).
+* Erick Fredj: Main developer, responsible for the advection, dispersion and output modules based on the Particle Tracking and Analysis Toolbox (PaTATO, Fredj et al., 2016) (erick.fredj@gmail.com).
 * Xiao-Hua Wang: Contributor. 
 
 
