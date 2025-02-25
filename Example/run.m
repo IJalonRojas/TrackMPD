@@ -1,4 +1,4 @@
-% Run TrackMPD v.1
+% Run TrackMPD v.2
 
 clear all; 
 conf_name='input_conf'; % Name of input file

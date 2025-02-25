@@ -1,5 +1,4 @@
 The example TELEMAC-Gironde 3D is too big to be shared via GitHub.
 For now, it can downloaded from this link:
-https://mycore.core-cloud.net/index.php/s/sXucSSy4NLy2AmU/download
-
+https://sdrive.cnrs.fr/s/i9y3mGqXjkYi2be
 

@@ -49,14 +49,14 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Mode
-conf.Traj.Verbose = 2; % 0: no information, 1: basic informations, 2: full informations
+conf.Traj.Verbose = 1; % 0: no information, 1: basic informations, 2: full informations
 conf.Traj.Mode = '3D'; %'2D' or '3D' tracking
 conf.Traj.NbCores = 4 ; % Number of cores for particule parallel processing
 
 % Time parameters
 conf.Traj.ReleaseTime = datenum(2021,06,02,0,0,0);
-conf.Traj.TrajectoryDuration = 1; % [days]
-conf.Traj.TimeStepCalc = 10/60/24; % [days]
+conf.Traj.TrajectoryDuration = 0.2; % [days]
+conf.Traj.TimeStepCalc = 5/60/24; % [days]
 %conf.Traj.TimeStepCalc = 5/60/24;
 conf.Traj.Direction = 'forward'; %forward or backward
 conf.Traj.Scheme = 'RK4'; % Euler: Euler 1st order, RK2 and RK4: Runge Kutta 2nd and 4th order
@@ -64,7 +64,7 @@ conf.Traj.Scheme = 'RK4'; % Euler: Euler 1st order, RK2 and RK4: Runge Kutta 2nd
 % Output
 conf.Traj.TimeStepOut=30/60/24; % time step outputs
 %conf.Traj.TimeStepOut=10/60/24;
-conf.Traj.ScenarioName = [conf.OGCM.DomainName '_chunk0.5_TSOut30_TSCalc10_AdvOnly']; % Free choice
+conf.Traj.ScenarioName = [conf.OGCM.DomainName '_example']; % Free choice
 conf.Traj.BaseDir = fullfile(pwd,'Outputs'); % Folder to save outputs
 
 % Chunk Method: to avoid memory, the time domain can be divided in
@@ -84,7 +84,6 @@ if strcmpi(conf.Traj.KvOption,'Cte');
 end
 
 % Other Transport Processes
-
 conf.Traj.Beaching = 'no'; % Beaching: 'yes' or 'no'
 conf.Traj.Refloating = 'no'; % Refloating: 'yes' or 'no'
 if strcmpi(conf.Traj.Refloating,'yes')
@@ -99,11 +98,20 @@ conf.Traj.Deposition = 'no'; % Deposition: 'yes' or 'no'
 conf.Traj.Resuspension = 'no'; % Resuspension: 'yes' or 'no'
 if strcmpi(conf.Traj.Resuspension,'yes')
   conf.Traj.Sliding = 'no'; % Sliding (bedload): 'yes' or 'no'
-  conf.Traj.ResOption = 'waldschlager'; % Options: soulsby, waldschlager,value
-    if strcmpi(conf.Traj.ResOption,'value')
-        conf.Traj.tauc1=NaN;
-        conf.Traj.tauc2=0;
-    end
+    
+  conf.Traj.ResOption = 'waldschlager'; % Options: soulsby, waldschlager, value
+  if strcmpi(conf.Traj.ResOption,'value')
+        conf.Traj.taucr1=NaN;
+        conf.Traj.traucr2=0.0013;
+  end
+  conf.Traj.HresMax=0.35; 
+  
+  conf.Traj.Tau0Formula='Classic'; %Options: 'Classic' or 'Wave Adapted' ('Classic is used in Gaia')
+  conf.Traj.z0=0.15;
+  if strcmpi(conf.Traj.Tau0Formula,'Classic')
+    conf.Traj.alpha=3;
+  end
+     
 end
 
 
@@ -173,7 +181,7 @@ end
    
 
                                         
-%Degradation
+% Degradation
 conf.Beh.Degradation='no'; %Option: 'no': no degradation
                            %         'Rate': size (and ws) decrease define by a rate
 
