@@ -725,7 +725,7 @@ for k=1:numpartition % EXTERNAL LOOP
           % CFL Check for advection, movement must be less than one grid cell
           CFLX = abs(ln_ADV-LL1)/DLon;
           CFLY = abs(lt_ADV-LL2)/DLat;
-         if conf.Traj.Verbose >= 1
+         if conf.Traj.Verbose >= 2
            if CFLX > 1 || CFLY > 1
              disp(['Warning, Advection CFL > 1 for part ' num2str(part) ', CFLX: ' num2str(CFLX,'%.2f') ', CFLY: ' num2str(CFLY,'%.2f')])
            end
