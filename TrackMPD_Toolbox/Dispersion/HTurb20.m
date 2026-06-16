@@ -55,8 +55,8 @@ devY=2*rand(n,1)-1;     % the random deviate in the Y direction
 
 % Apply random walk model to calculate horizontal turbulent particle
 % displacement
-TurbHx= devX.*sqrt(2*Kh*dt);
-TurbHy= devY.*sqrt(2*Kh*dt);
+TurbHx= sqrt(3)*devX.*sqrt(2*Kh*dt);
+TurbHy= sqrt(3)*devY.*sqrt(2*Kh*dt);
 
 varargout{1} = TurbHx;
 varargout{2} = TurbHy;

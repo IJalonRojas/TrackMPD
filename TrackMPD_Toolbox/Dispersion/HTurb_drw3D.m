@@ -31,15 +31,15 @@ devZ=2*rand(1,1)-1;     % the random deviate in the Z direction
 
 % Compute particle displacement (extended diffusion equation)
 TurbHx = (dKh_dX)*dt + ... % dKp/dX term in the original equation
-           devX .* ... % Random walk component
+           sqrt(3)*devX .* ... % Random walk component
            (sqrt(2 * Kh_shiftx * dt));
 
 TurbHy= (dKh_dY)*dt + ... % dKp/dY term in the original equation
-           devY .* ... % Random walk component
+           sqrt(3)*devY .* ... % Random walk component
            (sqrt(2 * Kh_shifty * dt));
 
 TurbV= (dKv_dZ)*dt + ... % dKp/dZ term in the original equation
-           devZ .* ... % Random walk component
+           sqrt(3)*devZ .* ... % Random walk component
            (sqrt(2 * Kv_shiftz * dt));
 
 end
