@@ -761,38 +761,53 @@ for k=1:numpartition % EXTERNAL LOOP
            end
          end
           
-          dt_s = TimeStepCalc*24*60*60; % timestep in seconds
+          dt_s = TimeStepCalc*24*60*60; % time step in seconds
 
-          % Horizontal turbulence : random walk naive
-          if strcmpi(conf.Traj.KhOption,'fromOGCM')
-            kh = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water);
+          % no horizontal Visser correction
+          dKh_dX = 0.0;
+          dKh_dY = 0.0;
+
+          % Case 1: constant Kh, constant Kv
+          if strcmpi(conf.Traj.KhOption,'Cte') && strcmpi(conf.Traj.KvOption,'Cte')
+              Kh_shiftx = conf.Traj.Kh;
+              Kh_shifty = conf.Traj.Kh;
+              Kv_shiftz = conf.Traj.Kv;
+              dKv_dZ    = 0.0;
+
+          % Case 2: Kh from OGCM, constant Kv
+          elseif strcmpi(conf.Traj.KhOption,'fromOGCM') && strcmpi(conf.Traj.KvOption,'Cte')
+              Kh_shiftx = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water);
+              Kh_shifty = Kh_shiftx;
+              Kv_shiftz = conf.Traj.Kv;
+              dKv_dZ    = 0.0;
+
+          % Case 3: constant Kh, Kv from OGCM (Visser correction applied on Kv)
+          elseif strcmpi(conf.Traj.KhOption,'Cte') && strcmpi(conf.Traj.KvOption,'fromOGCM')
+              Kh_shiftx = conf.Traj.Kh;
+              Kh_shifty = conf.Traj.Kh;
+              % Vertical diffusivity gradient dKv/dZ
+              dKv_dZ    = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,dK,[LL1 LL2 LL3],tspan(jj),mask_water);
+              % Kv evaluated at the shifted position (Visser correction)
+              Kv_shiftz = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),[LL1 LL2 LL3+0.5*dKv_dZ*dt_s],tspan(jj),mask_water);
+
+          % Case 4: Kh from OGCM, Kv from OGCM (Visser correction applied on Kv)
           else
-            kh = conf.Traj.Kh;
+              Kh_shiftx = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water);
+              Kh_shifty = Kh_shiftx;
+              dKv_dZ    = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,dK,[LL1 LL2 LL3],tspan(jj),mask_water);
+              % Kv evaluated at the shifted position (Visser correction)
+              Kv_shiftz = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),[LL1 LL2 LL3+0.5*dKv_dZ*dt_s],tspan(jj),mask_water);
           end
-          [TurbHx, TurbHy, ~] = HTurb30(1, dt_s, 'Kh', kh, 'Kv', 0.0);
 
-          % Vertical turbulence : random walk Visser with correction of Kv gradient
-
-          if strcmpi(conf.Traj.KvOption,'fromOGCM')
-            % Gradient dKv/dZ
-            dKv_dZ = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,dK,[LL1 LL2 LL3],tspan(jj),mask_water);
-            %Kv evaluated at the shifted position (correction of Visser)
-            Kv_shiftz = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),...
-                          [LL1 LL2 LL3+0.5*dKv_dZ*dt_s],tspan(jj),mask_water);
-          else
-            dKv_dZ  = 0.0;
-            Kv_shiftz = conf.Traj.Kv;
-          end
-          [~, ~, TurbV] = HTurb_drw3D(dt_s, 0.0, 0.0, Kv_shiftz, 0.0, 0.0, dKv_dZ);
+          % Single call to HTurb_drw3D
+          [TurbHx, TurbHy, TurbV] = HTurb_drw3D(dt_s, Kh_shiftx, Kh_shifty, Kv_shiftz,dKh_dX, dKh_dY, dKv_dZ);
 
           if ~strcmpi(conf.OGCM.Coordinates,'cartesian')
-            dlnTur=cosd(LL2)*(TurbHx/1000)/6371*180/pi; % VM 2024/04/05
-            dltTur=(TurbHy/1000)/6371*180/pi; % VM 2024/04/05
-%            dlnTur=km2deg(TurbHx/1000);
-%            dltTur=km2deg(TurbHy/1000);
+              dlnTur = cosd(LL2)*(TurbHx/1000)/6371*180/pi;
+              dltTur = (TurbHy/1000)/6371*180/pi;
           else
-            dlnTur=TurbHx;
-            dltTur=TurbHy;
+              dlnTur = TurbHx;
+              dltTur = TurbHy;
           end
 
           % Behaviour/Sinking
