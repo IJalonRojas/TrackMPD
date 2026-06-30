@@ -24,6 +24,26 @@ disp('running TrackMPD...')
 % Configuration
 conf=feval(conf_name);
 
+% Default values for 3D parameters not required in 2D
+if strcmpi(conf.Traj.Mode,'2D')
+  if ~isfield(conf.Traj,'KvOption')
+    conf.Traj.KvOption = 'none';
+  end
+  if ~isfield(conf.Traj,'Kv')
+    conf.Traj.Kv = 0.0;
+  end
+  if ~isfield(conf.Traj,'KhOption')
+    conf.Traj.KhOption = 'constant';
+  end
+  if ~isfield(conf.Traj,'Kh')
+    conf.Traj.Kh = 0.0;
+  end
+
+  if ~isfield(conf.OGCM,'VerticalLayer')
+    conf.OGCM.VerticalLayer = 'sigma2depthVar'; 
+  end
+end
+
 % Trajectory info
 ReleaseTime=conf.Traj.ReleaseTime; % Initial drifters release date
 
@@ -51,9 +71,13 @@ parfile = conf.Data.ParticlesFile;
 M = dlmread(parfile,',',0,0);
 par(:,pX)=M(:,1); % Create variable "par" with particles information
 par(:,pY)=M(:,2);
-par(:,pZ)=M(:,3);
 
 numpar=size(par,1);
+if strcmpi(conf.Traj.Mode,'3D')
+  par(:,pZ)=M(:,3);
+else
+  par(:,pZ)=zeros(numpar,1);
+end
 disp(['Number of particles = ' num2str(numpar) ' ; Release Time = ' datestr(ReleaseTime,'dd-mmm-yyyy HH:MM') ' ; ' conf.Traj.Direction ' trajectory']);
 
 % Parallel pool management
@@ -65,7 +89,7 @@ if mod(numpar,conf.Traj.NbCores) > 0
   disp(['Warning : The number of particles is not a multiple of conf.Traj.NbCores, it is not optimal !'])
 end
 if conf.Traj.NbCores > maxNumCompThreads('automatic')
-  disp(['Warning : conf.Traj.NbCores > Number of cores on the machine (' num2str(NbCores) '), NbCores is reduced accordingly:'])
+  disp(['Warning : conf.Traj.NbCores > Number of cores on the machine (' num2str(maxNumCompThreads('automatic')) '), NbCores is reduced accordingly.'])
   conf.Traj.NbCores = maxNumCompThreads('automatic');
 end
 disp(['conf.Traj.NbCores: ' num2str(conf.Traj.NbCores)])
@@ -431,7 +455,7 @@ for k=1:numpartition % EXTERNAL LOOP
       end
     end
     if strcmpi(conf.Traj.KvOption,'fromOGCM')
-      Kvsh=squeeze(KV(:,:,end-1,:)); % Kv at last layer  => Voir s'il faut aussi aller chercher à Layer
+      Kvsh=squeeze(KV(:,:,end-1,:)); % Kv at last layer
     else
       Kvsh=conf.Traj.Kv; % Kv at last layer   
     end
@@ -707,7 +731,13 @@ for k=1:numpartition % EXTERNAL LOOP
       %   disp(['Ind2 : ' num2str(Ind2)])
       TimeInd = Ind1(1):Ind2(1);
       TTs = TT(TimeInd);  
-       
+
+      % Vertical eddy diffusivity gradient dKv/dZ
+      % Computed once per external time step (does not depend on jj nor on particle position)
+      if strcmpi(conf.Traj.KvOption,'fromOGCM')
+        dK = zeros(size(KV(:,:,:,TimeInd)));
+        dK(:,:,2:end,:) = diff(KV(:,:,:,TimeInd),1,3) ./ diff(Depth(:,:,:,TimeInd),1,3);
+      end
 
       % Particle in water => Advection and turbulence computation
       if FateTypePart==0
@@ -731,28 +761,53 @@ for k=1:numpartition % EXTERNAL LOOP
            end
          end
           
-          % Turbulence
-          if strcmpi(conf.Traj.KhOption,'fromOGCM')
-            kh=interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water); 
+          dt_s = TimeStepCalc*24*60*60; % time step in seconds
+
+          % no horizontal Visser correction
+          dKh_dX = 0.0;
+          dKh_dY = 0.0;
+
+          % Case 1: constant Kh, constant Kv
+          if strcmpi(conf.Traj.KhOption,'Cte') && strcmpi(conf.Traj.KvOption,'Cte')
+              Kh_shiftx = conf.Traj.Kh;
+              Kh_shifty = conf.Traj.Kh;
+              Kv_shiftz = conf.Traj.Kv;
+              dKv_dZ    = 0.0;
+
+          % Case 2: Kh from OGCM, constant Kv
+          elseif strcmpi(conf.Traj.KhOption,'fromOGCM') && strcmpi(conf.Traj.KvOption,'Cte')
+              Kh_shiftx = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water);
+              Kh_shifty = Kh_shiftx;
+              Kv_shiftz = conf.Traj.Kv;
+              dKv_dZ    = 0.0;
+
+          % Case 3: constant Kh, Kv from OGCM (Visser correction applied on Kv)
+          elseif strcmpi(conf.Traj.KhOption,'Cte') && strcmpi(conf.Traj.KvOption,'fromOGCM')
+              Kh_shiftx = conf.Traj.Kh;
+              Kh_shifty = conf.Traj.Kh;
+              % Vertical diffusivity gradient dKv/dZ
+              dKv_dZ    = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,dK,[LL1 LL2 LL3],tspan(jj),mask_water);
+              % Kv evaluated at the shifted position (Visser correction)
+              Kv_shiftz = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),[LL1 LL2 LL3+0.5*dKv_dZ*dt_s],tspan(jj),mask_water);
+
+          % Case 4: Kh from OGCM, Kv from OGCM (Visser correction applied on Kv)
           else
-            kh=conf.Traj.Kh;
-          end
-          if strcmpi(conf.Traj.KvOption,'fromOGCM')
-            kv=interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water); 
-          else
-            kv=conf.Traj.Kv;
+              Kh_shiftx = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KH(:,:,:,TimeInd),[LL1 LL2 LL3],tspan(jj),mask_water);
+              Kh_shifty = Kh_shiftx;
+              dKv_dZ    = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,dK,[LL1 LL2 LL3],tspan(jj),mask_water);
+              % Kv evaluated at the shifted position (Visser correction)
+              Kv_shiftz = interpTrackMPD(longitude,latitude,Depth(:,:,:,TimeInd),TTs,KV(:,:,:,TimeInd),[LL1 LL2 LL3+0.5*dKv_dZ*dt_s],tspan(jj),mask_water);
           end
 
-          [TurbHx, TurbHy, TurbV] = HTurb30(1,TimeStepCalc*24*60*60,'Kh',kh,'Kv',kv);
+          % Single call to HTurb_drw3D
+          [TurbHx, TurbHy, TurbV] = HTurb_drw3D(dt_s, Kh_shiftx, Kh_shifty, Kv_shiftz,dKh_dX, dKh_dY, dKv_dZ);
 
           if ~strcmpi(conf.OGCM.Coordinates,'cartesian')
-            dlnTur=cosd(LL2)*(TurbHx/1000)/6371*180/pi; % VM 2024/04/05
-            dltTur=(TurbHy/1000)/6371*180/pi; % VM 2024/04/05
-%            dlnTur=km2deg(TurbHx/1000);
-%            dltTur=km2deg(TurbHy/1000);
+              dlnTur = cosd(LL2)*(TurbHx/1000)/6371*180/pi;
+              dltTur = (TurbHy/1000)/6371*180/pi;
           else
-            dlnTur=TurbHx;
-            dltTur=TurbHy;
+              dlnTur = TurbHx;
+              dltTur = TurbHy;
           end
 
           % Behaviour/Sinking
@@ -763,7 +818,7 @@ for k=1:numpartition % EXTERNAL LOOP
           else
             Behaviour = behaviour(conf.Beh,tspan,ReleaseTime); %IJR 0424
 			
-			% Floating particles don't come from the bed even in backward computation
+			% Floating particles don t come from the bed even in backward computation
             if Behaviour.Ws(jj)>0 && direction==-1
                 h_BEH = -Behaviour.Ws(jj)*(TimeStepCalc*24*60*60); % Ws (m/s) and TimeStepCalc (days) => h_BEH (m)
             else
@@ -886,7 +941,7 @@ for k=1:numpartition % EXTERNAL LOOP
               [LastUpPart,LastVpPart] = transformUScalar(LL1,LL2,LastUpPart,LastVpPart,conf.OGCM.Coordinates,-1); % convert to m/s
               TimeSettlingPart=tspan(end);     %IJR 24/02/24        
             else
-              LL3 = min([-Depth_partLonLat 0]); %min to avoid problems when interpolation near the coast
+              LL3 = min([-Depth_partLonLat, Surf_partLonLat]);
             end
           end
         end              
@@ -959,7 +1014,7 @@ for k=1:numpartition % EXTERNAL LOOP
   TRAJ.Lat = lt;
   TRAJ.Depth = h;
   
-  TRAJ.TimeStamp = ts_Tot_Output(1,:); %Time %IJR22 (avant ts_Tot_Output(:)')
+  TRAJ.TimeStamp = ts_Tot_Output(1,:); %Time
   TRAJ.InitialLonLatDepth = [TRAJ.Lon(:,1), TRAJ.Lat(:,1) TRAJ.Depth(:,1)]; %initial position
   TRAJ.FinalLonLatDepth(:,1) = TRAJ.Lon(:,end); %final position
   TRAJ.FinalLonLatDepth(:,2) = TRAJ.Lat(:,end);
@@ -1084,8 +1139,11 @@ TRAJ.OutDomainParticles=length(find(strcmpi(TRAJ.FateType,'OutDomain')));
 
 % Other metadata
 TRAJ.conf = conf;
-Behaviour = behaviour(conf.Beh,TRAJ.TimeStamp,ReleaseTime); %IJR Feb24
-TRAJ.conf.Beh= Behaviour; %IJR Feb24
+if strcmpi(conf.Traj.Mode,'3D')
+    % Only in 3D
+    Behaviour = behaviour(conf.Beh,TRAJ.TimeStamp,ReleaseTime); 
+    TRAJ.conf.Beh= Behaviour; 
+end
 
 % Not needed because MaskWater used instead
 %TRAJ.Domain.x=xland;
