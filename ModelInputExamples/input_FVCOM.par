@@ -1,0 +1,22 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OGCM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% OGCM inputs, folder and files
+OGCM.FVCOMFile = './InputData/YRE_0001.nc'
+OGCM.FVCOMGrid = './InputData/YRE_Geo.grd'
+    
+% Number of points in the new rectangular grid (lon dimension)    
+OGCM.NumLonGrid = 151
+   
+% Number of points in the new rectangular grid (lat dimension)
+OGCM.NumLatGrid = 63
+    
+% Name of variable time
+OGCM.NameTime = 'time'
+    
+% Name of variable for vertical velocity (3D mode)
+OGCM.NameW = 'ww' 
+
+%%%

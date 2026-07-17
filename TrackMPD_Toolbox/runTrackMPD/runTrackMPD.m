@@ -1,4 +1,4 @@
-function runTrackMPD(conf_name,varargin)
+function runTrackMPD(conf_file, telemac_file, indices_particules, id_Node)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This script run TrackMPD model (2D and 3D mode)
 %
@@ -6,12 +6,14 @@ function runTrackMPD(conf_name,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % 	$Id: runTrackMPD.m 001 2018-02-12 10:55:10Z ef $
-%        Last version: 2025-02-21 vmarieu
+%        Last version: 2026-06-01 
 %
 % Copyright (C) 2017-2019 Isabel Jalon-Rojas & Vincent Marieu 
 % Licence: GPL (Gnu Public License)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% RUNTRACKMPD Main script to run TrackMPD model (2D and 3D mode)
 
 disp('running TrackMPD...')
 
@@ -21,8 +23,24 @@ disp('running TrackMPD...')
 % trajectory, particles, domain and grid
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Configuration
-conf=feval(conf_name);
+if ischar(conf_file) || isstring(conf_file)
+    [~, name_only, ext] = fileparts(conf_file); 
+    if strcmpi(ext, '.par')
+        conf = read_input_conf(conf_file);
+    else
+        conf = feval(name_only);
+    end
+elseif isstruct(conf_file)
+    conf = conf_file;
+else
+    error('The first argument must be a config file or a structure.');
+end
+
+% Display simulation parameter informations
+conf.Data
+conf.OGCM
+conf.Traj
+conf.Beh
 
 % Default values for 3D parameters not required in 2D
 if strcmpi(conf.Traj.Mode,'2D')
@@ -40,7 +58,7 @@ if strcmpi(conf.Traj.Mode,'2D')
   end
 
   if ~isfield(conf.OGCM,'VerticalLayer')
-    conf.OGCM.VerticalLayer = 'sigma2depthVar'; 
+    conf.OGCM.VerticalLayer = 'sigma2depthVar';
   end
 end
 
@@ -49,57 +67,73 @@ ReleaseTime=conf.Traj.ReleaseTime; % Initial drifters release date
 
 switch lower(conf.Traj.Direction) % direction
   case 'backward'
-    direction=-1;
+    direction = -1;
   case 'forward'
-    direction=1;
+    direction = 1;
   otherwise
     error('wrong direction in inputs_conf')
 end
 
-t0=ReleaseTime; %start date
-trajDuration=conf.Traj.TrajectoryDuration;
-tend=ReleaseTime+direction*trajDuration; %final date
+t0 = ReleaseTime; 
+trajDuration = conf.Traj.TrajectoryDuration;
+tend = ReleaseTime + direction * trajDuration; %final date
 
-
-% Particles
-pX  =  1;               % Particle X-coordinate
-pY  =  2;               % Particle Y-coordinate
-pZ  =  3;               % Particle Z-coordinate
+%% Loading and splitting particules
+pX  =  1;               
+pY  =  2;               
+pZ  =  3;               
 
 parfile = conf.Data.ParticlesFile;
+M = dlmread(parfile, ',', 0, 0);
 
-M = dlmread(parfile,',',0,0);
-par(:,pX)=M(:,1); % Create variable "par" with particles information
-par(:,pY)=M(:,2);
+% Local safety: If launched without a specific list
+if nargin < 3 || isempty(indices_particules)
+    indices_particules = 1:size(M, 1);
+end
 
-numpar=size(par,1);
+M = M(indices_particules, :);
+
+% Coherence check between mode and particle file format
+if strcmpi(conf.Traj.Mode,'3D') && size(M,2) < 3
+  error('3D mode requires a particle file with 3 columns (X, Y, Z).');
+end
+
+% Renaming the scenario to avoid overwriting results from other nodes
+if nargin >= 4 && ~isempty(id_Node)
+    conf.Traj.ScenarioName = sprintf('%s_Node%d', conf.Traj.ScenarioName, id_Node);
+end
+
+par(:,pX) = M(:,1); 
+par(:,pY) = M(:,2);
+
+numpar = size(par,1);
 if strcmpi(conf.Traj.Mode,'3D')
-  par(:,pZ)=M(:,3);
+  par(:,pZ) = M(:,3);
 else
-  par(:,pZ)=zeros(numpar,1);
+  par(:,pZ) = zeros(numpar,1);
 end
 disp(['Number of particles = ' num2str(numpar) ' ; Release Time = ' datestr(ReleaseTime,'dd-mmm-yyyy HH:MM') ' ; ' conf.Traj.Direction ' trajectory']);
 
 % Parallel pool management
-if conf.Traj.NbCores > numpar
-  disp(['Warning : conf.Traj.NbCores > Number of particles, conf.Traj.NbCores is reduced accordingly:'])
-  conf.Traj.NbCores = numpar;
+if conf.Traj.NbCoresPerNode > numpar
+  disp(['Warning : conf.Traj.NbCoresPerNode > Number of particles, conf.Traj.NbCoresPerNode is reduced accordingly:'])
+  conf.Traj.NbCoresPerNode = numpar;
 end
-if mod(numpar,conf.Traj.NbCores) > 0
-  disp(['Warning : The number of particles is not a multiple of conf.Traj.NbCores, it is not optimal !'])
+if mod(numpar,conf.Traj.NbCoresPerNode) > 0
+  disp(['Warning : The number of particles is not a multiple of conf.Traj.NbCoresPerNode, it is not optimal !'])
 end
-if conf.Traj.NbCores > maxNumCompThreads('automatic')
-  disp(['Warning : conf.Traj.NbCores > Number of cores on the machine (' num2str(maxNumCompThreads('automatic')) '), NbCores is reduced accordingly.'])
-  conf.Traj.NbCores = maxNumCompThreads('automatic');
+if conf.Traj.NbCoresPerNode > maxNumCompThreads('automatic')
+  disp(['Warning : conf.Traj.NbCoresPerNode > Number of cores on the machine (' num2str(maxNumCompThreads('automatic')) '), NbCores is reduced accordingly.'])
+  conf.Traj.NbCoresPerNode = maxNumCompThreads('automatic');
 end
-disp(['conf.Traj.NbCores: ' num2str(conf.Traj.NbCores)])
+disp(['conf.Traj.NbCoresPerNode: ' num2str(conf.Traj.NbCoresPerNode)])
 Pool = gcp('nocreate');
 if isempty(Pool)
-  parpool('local',conf.Traj.NbCores);
+  parpool('local',conf.Traj.NbCoresPerNode);
 else
-  if Pool.NumWorkers~=conf.Traj.NbCores
+  if Pool.NumWorkers~=conf.Traj.NbCoresPerNode
     delete(Pool);
-    parpool('local',conf.Traj.NbCores);
+    parpool('local',conf.Traj.NbCoresPerNode);
   end
 end
 
@@ -519,9 +553,13 @@ for k=1:numpartition % EXTERNAL LOOP
   if conf.Traj.Verbose >= 2
     disp('Begining parallel loop on particles...')
   end
-  parfor (part=1:numpar,conf.Traj.NbCores)
-    tic           
   
+  parfor (part=1:numpar,conf.Traj.NbCoresPerNode)
+    tic 
+    
+    id_globale_particule = indices_particules(part); 
+    rng(id_globale_particule, 'twister'); %ensure reproducibility of simulations even when dispersion is ON
+
     ln_Tot_Part = zeros(1,len_tspan_chunk);
     lt_Tot_Part = zeros(1,len_tspan_chunk);
     h_Tot_Part = zeros(1,len_tspan_chunk);
@@ -803,11 +841,13 @@ for k=1:numpartition % EXTERNAL LOOP
           [TurbHx, TurbHy, TurbV] = HTurb_drw3D(dt_s, Kh_shiftx, Kh_shifty, Kv_shiftz,dKh_dX, dKh_dY, dKv_dZ);
 
           if ~strcmpi(conf.OGCM.Coordinates,'cartesian')
-              dlnTur = cosd(LL2)*(TurbHx/1000)/6371*180/pi;
-              dltTur = (TurbHy/1000)/6371*180/pi;
+            dlnTur=cosd(LL2)*(TurbHx/1000)/6371*180/pi; % VM 2024/04/05
+            dltTur=(TurbHy/1000)/6371*180/pi; % VM 2024/04/05
+%            dlnTur=km2deg(TurbHx/1000);
+%            dltTur=km2deg(TurbHy/1000);
           else
-              dlnTur = TurbHx;
-              dltTur = TurbHy;
+            dlnTur=TurbHx;
+            dltTur=TurbHy;
           end
 
           % Behaviour/Sinking
@@ -826,7 +866,7 @@ for k=1:numpartition % EXTERNAL LOOP
             end
           end
 
-          % New particule position
+          % New particle position
           LL1 = ln_ADV+dlnTur;     % Advection + Turbulence
           LL2 = lt_ADV+dltTur;     % Advection + Turbulence
           LL3 = h_ADV+TurbV-h_BEH; % Advection + Turbulence + Behaviour 

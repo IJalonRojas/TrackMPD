@@ -1,7 +1,14 @@
-function transformTELEMACinputs_3D(conf_name,confOGCM_name)
+function transformTELEMACinputs_3D_2Grids(conf, ModelParameterFile)
 % TRANSFORM OGCM outputs (FURG TELEMAC version) to TrackMPD format
 % Itele and I.Jalon-Rojas  12 Nov 2019; based on LoadFVCOMFiles_3D
 
+%% Read the model configuration file
+confOGCM = read_input_TELEMAC(ModelParameterFile); %IJR new input format
+conf=mergeStructure(conf,confOGCM); %IJR new input format
+
+file = conf.OGCM.TELEMACFile;
+domain=load(conf.Data.Domain);
+t0=conf.OGCM.t0; %TELEMAC reference time variable (first time step)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% INPUTS (TELEMAC version)
@@ -16,16 +23,6 @@ function transformTELEMACinputs_3D(conf_name,confOGCM_name)
 % One file for each time step containing u,v,w,E,depth,time,time_str
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Call the model configuration and inputs files
-
-%conf=feval(conf_name); version 1
-conf=feval(conf_name);
-confOGCM=feval(confOGCM_name); %IJR new input format
-conf=mergeStructure(conf,confOGCM); %IJR new input format
-
-file = conf.OGCM.TELEMACFile;
-domain=load(conf.Data.Domain);
-t0=conf.OGCM.t0; %TELEMAC reference time variable (first time step)
 
 % TO AVOID MEMORY PROBLEMS: we will save one output file with the new format 
 % for each OGCM model time step (the OGCM model time step is defined inside conf)

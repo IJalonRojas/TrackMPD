@@ -1,4 +1,4 @@
-function transformMARSinputs_3D(conf_name,confOGCM_name)
+function transformMARSinputs_3D(conf,ModelParameterFile)
 % TRANSFORM OGCM outputs (MARS-3D) to TrackMPD format
 % I.Jalon-Rojas  20 Mars 2020
 
@@ -6,7 +6,7 @@ function transformMARSinputs_3D(conf_name,confOGCM_name)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% INPUTS (MARS version)
 % MARS output file
-%
+% 
 
 %%%% OUTPUTS
 % grid.mat
@@ -14,15 +14,14 @@ function transformMARSinputs_3D(conf_name,confOGCM_name)
 % One file for each time step containing u,v,w,E,depth,time,time_str
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Call the model configuration and inputs files
-
-conf=feval(conf_name);
-confOGCM=feval(confOGCM_name); %IJR new input format
+%% Read the model configuration file
+confOGCM = read_input_MARS(ModelParameterFile); %IJR new input format
 conf=mergeStructure(conf,confOGCM); %IJR new input format
 
-file = conf.OGCM.MARSFile;
+file = [conf.OGCM.BaseDir '/' conf.OGCM.MARSFile];
 domain=load(conf.Data.Domain);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TO AVOID MEMORY PROBLEMS: we will save one output file with the new format 
 % for each OGCM model time step (the OGCM model time step is defined inside conf)
 
