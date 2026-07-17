@@ -1,0 +1,20 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OGCM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%Particular inputs for MOHID
+
+% OGCM inputs, folder and files
+OGCM.MOHID_Prefix = 'ext_MOHID_Hydrodynamic_Arousa_'
+OGCM.MOHID_Suffix = '.nc';
+
+% Third dimension configuration (only for 3D version)
+OGCM.SigmaFile = './InputDatasigma_layers.dat'
+
+% Beginning of MOHID time
+OGCM.t0 = datenum(2004,01,01,00,00,00)
+
+% Number of time steps per file    
+OGCM.step = 24 
+%%%
+    

@@ -1,0 +1,8 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OGCM
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% OGCM inputs, folder and files
+OGCM.MARSFile = './InputData/champs_ex.nc'
+

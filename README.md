@@ -10,7 +10,13 @@ Modified from Jalón-Rojas et al. (2019). Refer to this publication for further 
 
 # TrackMPD versions
 
+- TrackMPD_v4:
+
+     * Simplified input files (.par)
+     * Parallel execution over multiple nodes
+
 - TrackMPD_v3:
+
      * Same reference system as hydrodynamic models
      * New parameterizations for resuspension
      * New beaching calculation 

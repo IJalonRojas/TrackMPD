@@ -1,4 +1,4 @@
-function transformTELEMACinputs_2D(conf_name,confOGCM_name)
+function transformTELEMACinputs_2D(conf,ModelParameterFile)
 % TRANSFORM OGCM outputs (FURG TELEMAC version) to TrackMPD format
 % Itele and I.Jalon-Rojas  12 Nov 2019; based on LoadFVCOMFiles_3D
 
@@ -16,10 +16,8 @@ function transformTELEMACinputs_2D(conf_name,confOGCM_name)
 % One file for each time step containing u,v,w,E,depth,time,time_str
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Call the model configuration and inputs files
-
-conf=feval(conf_name);
-confOGCM=feval(confOGCM_name); %IJR new input format
+%% Read the model configuration file
+confOGCM = read_input_TELEMAC(ModelParameterFile); %IJR new input format
 conf=mergeStructure(conf,confOGCM); %IJR new input format
 
 file = conf.OGCM.TELEMACFile;
@@ -79,15 +77,22 @@ Lon=linspace(minLon,maxLon,numlon);
 % (water/land) mask
 % Fixed => Not updated at each time step
 ti=ones(size(Lon_matrix));
+
 for i=1:numlat
     for j=1:numlon
+
         ti(i,j) = ~inpolygon(Lon(j),Lat(i),domain(:,1),domain(:,2)); %ti=0-->Land point
+
     end
 end
+
 ti(ti==0)=NaN;
+
+% (water/land) mask
 mask_water=zeros(size(ti));
 mask_water(~isnan(ti))=1;
 mask_land = ~mask_water;
+
 mask_land3D = mask_land;
 for i=1:numlvl-1
     mask_land3D = cat(3,mask_land3D,mask_land);

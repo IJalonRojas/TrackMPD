@@ -1,0 +1,16 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OGCM
+%% Particular inputs for POM (SARCCM version)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% OGCM inputs, folder and files
+OGCM.POM_Prefix = 'u_h'
+OGCM.POM_Suffix = '.nc'
+    
+% POM reference time variable, date of the first time step: datenum(y,m,d,H,M,S)
+OGCM.t0 = datenum(1998,06,26,00,0,0)
+   
+% Depth for land
+OGCM.Hmin = 1
+       
+%%%

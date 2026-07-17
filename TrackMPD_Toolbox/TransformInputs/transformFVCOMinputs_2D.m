@@ -197,6 +197,7 @@ for i=1:NTimeStamps
     E(mask_water==0)=NaN; %Land point=0
     E(isnan(E))=griddata(x,y,ele(:,i),Lon_matrix(isnan(E)),Lat_matrix(isnan(E)),'nearest'));  
     
+      
     %1D variables: time
     time=timestamps(i);
     time_str = datestr(time,'dd-mmm-yyyy HH:MM:SS');

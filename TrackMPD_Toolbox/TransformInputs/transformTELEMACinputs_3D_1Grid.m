@@ -1,7 +1,14 @@
-function transformTELEMACinputs_3D(conf_name,confOGCM_name)
+function transformTELEMACinputs_3D_1Grid(conf, ModelParameterFile)
 % TRANSFORM OGCM outputs (FURG TELEMAC version) to TrackMPD format
 % Itele and I.Jalon-Rojas  12 Nov 2019; based on LoadFVCOMFiles_3D
 
+%% Read the model configuration file
+confOGCM = read_input_TELEMAC(ModelParameterFile); %IJR new input format
+conf=mergeStructure(conf,confOGCM); %IJR new input format
+
+file = conf.OGCM.TELEMACFile;
+domain=load(conf.Data.Domain);
+t0=conf.OGCM.t0; %TELEMAC reference time variable (first time step)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% INPUTS (TELEMAC version)
@@ -16,16 +23,7 @@ function transformTELEMACinputs_3D(conf_name,confOGCM_name)
 % One file for each time step containing u,v,w,E,depth,time,time_str
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Call the model configuration and inputs files
 
-%conf=feval(conf_name); version 1
-conf=feval(conf_name);
-confOGCM=feval(confOGCM_name); %IJR new input format
-conf=mergeStructure(conf,confOGCM); %IJR new input format
-
-file = conf.OGCM.TELEMACFile;
-domain=load(conf.Data.Domain);
-t0=conf.OGCM.t0; %TELEMAC reference time variable (first time step)
 
 % TO AVOID MEMORY PROBLEMS: we will save one output file with the new format 
 % for each OGCM model time step (the OGCM model time step is defined inside conf)
@@ -108,6 +106,13 @@ fprintf('saving timestamps\n');
 % Read variables (NumGridPts,layer)
 data_t=data;
 
+disp(' ')
+disp('WARNING !! ')
+disp('CHECK THAT THE VARIABLES ARE PRESENT IN THE MODEL OUTPUT FILE AT THE RIGHT POSITIONS !!')
+disp('VARIABLES: DEPTH UU VV KVV RHO etc.')
+disp('OR CHANGE transformTELEMACinputs_3D_1Grid.m')
+disp(' ')
+
 for t = 1:NTimeStamps 
  
     % Open data for each time step. data_t is updated each time
@@ -118,8 +123,8 @@ for t = 1:NTimeStamps
         DEPTH(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),1);
         UU(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),2);   %velocities units = 'm/s'
         VV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),3);
-%        KVV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),7);
-%	      RHO(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),4);
+        try KVV(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),7); end
+	    try RHO(:,lv,t) = data_t.RESULT(NumGridPts*(numlvl-lv)+1:NumGridPts*(numlvl+1-lv),4); end
     end
     
 end
@@ -145,7 +150,8 @@ for i=1:NTimeStamps
     v=nan(numlat,numlon,numlvl);
     w=nan(numlat,numlon,numlvl);
     E=nan(numlat,numlon);
-    
+    kv=nan(numlat,numlon,numlvl);
+
     % 3D variables
     % Bilinear interpolation generates values everywhere because there is
     % no grid cell outside of the domain for unstructured meshes => No NaN in interpolated values 
@@ -161,8 +167,10 @@ for i=1:NTimeStamps
         %Vaux(isnan(Vaux))=0; 
         v(:,:,j)=Vaux;
         
-        KVaux=griddata(x,y,KVV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of KV in the new grid
-        kv(:,:,j)=KVaux;
+        if exist('KVV', 'var')
+            KVaux=griddata(x,y,KVV(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of KV in the new grid
+            kv(:,:,j)=KVaux;
+        end
 	
 %        RHOaux=griddata(x,y,RHO(:,j,i),Lon_matrix,Lat_matrix,'linear'); % Interpolation of RHO in the new grid
 %        rho(:,:,j)=RHOaux;

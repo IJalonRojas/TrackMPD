@@ -1,4 +1,4 @@
-function transformInputs(conf_name,confOGCM_name)
+function transformInputs(ParameterFile,ModelParameterFile)
 
 % TRANSFORMOUTPUTS select the function to transmorm the format of OGCM inputs
 % to TrackMPD format
@@ -14,40 +14,50 @@ function transformInputs(conf_name,confOGCM_name)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-conf=feval(conf_name);
+conf=read_input_conf(ParameterFile);
 
 OGCMmodel_name=conf.OGCM.Model_name;
 Mode=conf.Traj.Mode;
 
 if strcmpi(OGCMmodel_name,'POM') && strcmpi(Mode,'3D')
-    transformPOMinputs_3D(conf_name,confOGCM_name)
+    transformPOMinputs_3D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'POM') && strcmpi(Mode,'2D')
-    transformPOMinputs_2D(conf_name,confOGCM_name)
+    transformPOMinputs_2D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'FVCOM') && strcmpi(Mode,'3D')
-    transformFVCOMinputs_3D(conf_name,confOGCM_name)
+    transformFVCOMinputs_3D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'FVCOM') && strcmpi(Mode,'2D')
-    transformFVCOMinputs_2D(conf_name,confOGCM_name)
+    transformFVCOMinputs_2D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'TELEMAC') && strcmpi(Mode,'3D')
-    transformTELEMACinputs_3D_1Grid(conf_name,confOGCM_name)
+% to manage the two options :
+    if isfield(conf.OGCM, 'nb_grids') && conf.OGCM.nb_grids == 2
+        disp('Starting TELEMAC 3D transformation (Nested 2-Grid Mode)...');
+        transformTELEMACinputs_3D_2Grids(conf,ModelParameterFile);
+    else
+        disp('Starting TELEMAC 3D transformation (Standard 1-Grid Mode)...');
+        transformTELEMACinputs_3D_1Grid(conf,ModelParameterFile);
+    end
     
 elseif strcmpi(OGCMmodel_name,'TELEMAC') && strcmpi(Mode,'2D')
-    transformTELEMACinputs_2D(conf_name,confOGCM_name)
+    transformTELEMACinputs_2D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'MARS') && strcmpi(Mode,'3D')
-    transformMARSinputs_3D(conf_name,confOGCM_name)
+    transformMARSinputs_3D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'MARS') && strcmpi(Mode,'2D')
-    transformMARSinputs_2D(conf_name,confOGCM_name)
+    transformMARSinputs_2D(conf,ModelParameterFile)
+
+elseif strcmpi(OGCMmodel_name,'MARC')
+    transformMARCinputs_2D(conf,ModelParameterFile)
 
 elseif strcmpi(OGCMmodel_name,'MOHID') && strcmpi(Mode,'3D')
-    transformMOHIDinputs_3D(conf_name,confOGCM_name)
+    transformMOHIDinputs_3D(conf,ModelParameterFile)
     
 elseif strcmpi(OGCMmodel_name,'MOHID') && strcmpi(Mode,'2D')
-    transformMOHIDinputs_2D(conf_name,confOGCM_name)
+    transformMOHIDinputs_2D(conf,ModelParameterFile)
 
 end
 
